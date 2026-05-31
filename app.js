@@ -752,7 +752,13 @@ let briHudTimer = null;
 function applyBrightness(level) {
   level = Math.max(0, Math.min(5, level));
   save('briLevel', level);
-  brightnessOverlay.style.opacity = BRI_DIM[level];
+  // Erst echte Hardware-Helligkeit versuchen; klappt das nicht, Software-Abdunklung
+  fetch('/api/brightness', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ level })
+  }).then(r => r.json())
+    .then(d => { brightnessOverlay.style.opacity = (d && d.ok) ? 0 : BRI_DIM[level]; })
+    .catch(() => { brightnessOverlay.style.opacity = BRI_DIM[level]; });
 }
 function showBriHud(level) {
   briSegs.forEach((s, i) => s.classList.toggle('on', i <= level));

@@ -501,6 +501,45 @@ def update_apply():
     return {'ok': ok, 'msg': out[:400], 'restart': ok and IS_LINUX}
 
 
+# ---- Bildschirm-Helligkeit (echte Hardware, sonst Fallback im Frontend) -----
+BRI_PCT = [20, 35, 50, 68, 84, 100]   # 6 Stufen → Prozent
+
+def set_brightness(level):
+    try:
+        level = max(0, min(5, int(level)))
+    except Exception:
+        level = 5
+    pct = BRI_PCT[level]
+    if not IS_LINUX:
+        return {'ok': False, 'method': None, 'pct': pct}
+    # 1) Hardware-Backlight (DSI/Panels mit /sys/class/backlight)
+    base = '/sys/class/backlight'
+    try:
+        for name in sorted(os.listdir(base)):
+            d = os.path.join(base, name)
+            try:
+                with open(os.path.join(d, 'max_brightness')) as f:
+                    mx = int(f.read().strip())
+                val = max(1, min(mx, round(pct / 100 * mx)))
+                with open(os.path.join(d, 'brightness'), 'w') as f:
+                    f.write(str(val))
+                return {'ok': True, 'method': 'backlight:' + name, 'pct': pct}
+            except Exception:
+                continue
+    except Exception:
+        pass
+    # 2) DDC/CI (HDMI-Monitore mit Helligkeitssteuerung)
+    if sh(['which', 'ddcutil']):
+        try:
+            r = subprocess.run(['ddcutil', '--noverify', 'setvcp', '10', str(pct)],
+                               capture_output=True, text=True, timeout=15)
+            if r.returncode == 0:
+                return {'ok': True, 'method': 'ddcutil', 'pct': pct}
+        except Exception:
+            pass
+    return {'ok': False, 'method': None, 'pct': pct}
+
+
 def system_info():
     return {
         'hostname': socket.gethostname(),
@@ -621,6 +660,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._json(time_set((b.get('timezone') or '').strip(), b.get('ntp')))
         if p.startswith('/api/update/apply'):
             return self._json(update_apply())
+        if p.startswith('/api/brightness'):
+            return self._json(set_brightness(self._body().get('level', 5)))
 
         if p.startswith('/api/bt/'):
             if not bt_available():

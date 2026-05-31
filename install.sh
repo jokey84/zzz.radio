@@ -24,7 +24,7 @@ if apt-cache show chromium >/dev/null 2>&1; then CHROME_PKG=chromium; else CHROM
 echo "   Chromium-Paket: $CHROME_PKG"
 sudo apt install -y \
   cage "$CHROME_PKG" python3 git \
-  network-manager upower \
+  network-manager upower ddcutil \
   pipewire pipewire-pulse wireplumber libspa-0.2-bluetooth pulseaudio-utils \
   fonts-dejavu-core fonts-noto-color-emoji
 fc-cache -f >/dev/null 2>&1 || true   # Emoji-Schrift sofort verfügbar machen
@@ -73,6 +73,13 @@ if [ -n "$MAT" ]; then
 else
   sudo rm -f "$TOUCHRULE" 2>/dev/null || true   # Hochformat: keine Matrix nötig
 fi
+
+# Helligkeit per Hardware ermöglichen (Backlight-Schreibrecht + i2c für DDC/CI)
+echo 'i2c-dev' | sudo tee /etc/modules-load.d/i2c-dev.conf >/dev/null
+echo 'ACTION=="add", SUBSYSTEM=="backlight", RUN+="/bin/chmod a+w /sys/class/backlight/%k/brightness"' \
+  | sudo tee /etc/udev/rules.d/90-zzzradio-backlight.rules >/dev/null
+sudo udevadm control --reload 2>/dev/null || true
+sudo chmod a+w /sys/class/backlight/*/brightness 2>/dev/null || true
 
 # ---- 3) Bildschirm nicht abdunkeln -----------------------------------------
 CMD=/boot/firmware/cmdline.txt
