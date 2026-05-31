@@ -1177,6 +1177,7 @@ const PANELS = {
       b.appendChild(setSection('Allgemein'));
       navItem(b, '⏰', 'Wecker',        () => navigate(PANELS.alarm));
       navItem(b, '🕐', 'Datum & Zeit',  () => navigate(PANELS.datetime));
+      navItem(b, '⬇️', 'Update',        () => navigate(PANELS.update));
       navItem(b, '⚙️', 'System',        () => navigate(PANELS.system));
       navItem(b, 'ℹ️', 'Über',           () => navigate(PANELS.about));
     }
@@ -1444,6 +1445,70 @@ const PANELS = {
     }
   },
 
+  update: {
+    title: 'Update',
+    render(b) {
+      b.appendChild(setSection('Version'));
+      const ver = el('div'); b.appendChild(ver);
+      const status = el('div'); b.appendChild(status);
+      b.appendChild(setSection('GitHub'));
+      const checkBtn = el('button', 'set-action', '🔄 Nach Updates suchen');
+      b.appendChild(checkBtn);
+      const applyWrap = el('div'); b.appendChild(applyWrap);
+      b.appendChild(el('div', 'set-note',
+        'zzz.radio holt die neueste Version aus dem GitHub-Repo (git pull) und ' +
+        'startet anschließend neu. Funktioniert nur, wenn per git installiert.'));
+
+      const renderState = (d) => {
+        ver.innerHTML = ''; status.innerHTML = ''; applyWrap.innerHTML = '';
+        if (!d) return;
+        if (d.git === false) {
+          status.appendChild(el('div', 'search-hint', d.msg || 'Kein Git-Repo.'));
+          return;
+        }
+        infoRow(ver, 'Installiert', d.current || '—');
+        infoRow(ver, 'Auf GitHub',  d.latest || '—');
+        if (d.available) {
+          status.appendChild(el('div', 'update-badge', `⬆️ Update verfügbar (${d.behind} Commit${d.behind > 1 ? 's' : ''})`));
+          if (d.latestMsg) status.appendChild(el('div', 'set-note', 'Neueste Änderung: ' + escapeHtml(d.latestMsg)));
+          const applyBtn = el('button', 'set-action', '⬇️ Jetzt aktualisieren');
+          applyBtn.addEventListener('click', () => doApply(applyBtn));
+          applyWrap.appendChild(applyBtn);
+        } else {
+          status.appendChild(el('div', 'update-badge ok', '✓ zzz.radio ist aktuell'));
+        }
+      };
+      const doCheck = () => {
+        checkBtn.textContent = 'verbinde mit GitHub …'; checkBtn.disabled = true;
+        ver.innerHTML = ''; status.innerHTML = ''; applyWrap.innerHTML = '';
+        fetch('/api/update/check').then(r => r.json()).then(d => {
+          checkBtn.textContent = '🔄 Nach Updates suchen'; checkBtn.disabled = false; renderState(d);
+        }).catch(() => {
+          checkBtn.textContent = '🔄 Nach Updates suchen'; checkBtn.disabled = false;
+          status.appendChild(el('div', 'search-hint', 'Kein Dienst / kein Internet.'));
+        });
+      };
+      const doApply = (btn) => {
+        if (!confirm('Update installieren und zzz.radio neu starten?')) return;
+        btn.textContent = 'aktualisiere …'; btn.disabled = true;
+        fetch('/api/update/apply', { method: 'POST' }).then(r => r.json()).then(d => {
+          if (d.ok) {
+            status.innerHTML = ''; applyWrap.innerHTML = '';
+            status.appendChild(el('div', 'update-badge ok', '✓ Aktualisiert – Neustart …'));
+            setTimeout(() => location.reload(), 5000);
+          } else { btn.textContent = '⬇️ Jetzt aktualisieren'; btn.disabled = false; alert('Fehler: ' + (d.msg || '')); }
+        }).catch(() => {       // Dienst startet neu → Verbindung kurz weg ist normal
+          status.innerHTML = ''; applyWrap.innerHTML = '';
+          status.appendChild(el('div', 'update-badge ok', '✓ Neustart …'));
+          setTimeout(() => location.reload(), 6000);
+        });
+      };
+
+      checkBtn.addEventListener('click', doCheck);
+      doCheck();                                   // beim Öffnen direkt prüfen
+    }
+  },
+
   system: {
     title: 'System',
     render(b) {
@@ -1479,15 +1544,6 @@ const PANELS = {
       const shut = el('button', 'set-action danger', '⏻ Pi herunterfahren');
       shut.addEventListener('click', () => powerAction('shutdown', 'Pi wirklich herunterfahren?'));
       b.appendChild(shut);
-      const upd = el('button', 'set-action', '⬇️ Nach Updates suchen');
-      upd.addEventListener('click', () => {
-        upd.textContent = 'suche …';
-        fetch('/api/update', { method: 'POST' }).then(r => r.json()).then(d => {
-          upd.textContent = '⬇️ Nach Updates suchen';
-          alert(d.ok ? (d.msg || 'Aktualisiert.') : ('Nicht möglich: ' + (d.msg || '')));
-        }).catch(() => { upd.textContent = '⬇️ Nach Updates suchen'; alert('Kein Dienst erreichbar.'); });
-      });
-      b.appendChild(upd);
       const reset = el('button', 'set-action danger', '🧹 Werkseinstellungen');
       reset.addEventListener('click', () => {
         if (!confirm('Alle lokalen App-Einstellungen zurücksetzen?')) return;
@@ -1495,8 +1551,8 @@ const PANELS = {
       });
       b.appendChild(reset);
       b.appendChild(el('div', 'set-note',
-        'Neustart/Herunterfahren/Update laufen nur auf dem Pi (über server.py). ' +
-        'Werkseinstellungen löscht die lokalen App-Einstellungen.'));
+        'Neustart/Herunterfahren laufen nur auf dem Pi (über server.py). ' +
+        'Updates unter „Update". Werkseinstellungen löscht die lokalen App-Einstellungen.'));
     }
   },
 

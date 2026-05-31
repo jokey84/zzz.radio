@@ -230,6 +230,18 @@ body {
   font-variant-numeric: tabular-nums; min-width: 78px; text-align: center; }
 .alarm-colon { font-size: 40px; font-weight: 300; color: var(--text-dim); padding-bottom: 4px; }
 
+/* Update-Status */
+.update-badge {
+  display: inline-block; padding: 11px 15px; border-radius: 12px;
+  font-size: 14px; font-weight: 700; margin-bottom: 8px;
+  background: linear-gradient(180deg, rgba(126,192,255,.2), rgba(78,163,255,.07));
+  border: 1px solid rgba(126,192,255,.45); color: #9fd0ff;
+}
+.update-badge.ok {
+  background: linear-gradient(180deg, rgba(58,210,159,.18), rgba(58,210,159,.06));
+  border-color: rgba(58,210,159,.45); color: #8df0c4;
+}
+
 /* ===== Sender-Suche ===== */
 .add-btn.primary-add {
   border-style: solid; border-color: rgba(78,163,255,.5);

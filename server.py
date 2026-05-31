@@ -7,7 +7,7 @@
 #
 # Start:   python3 server.py [PORT]      (Standard-Port 8080)
 # ============================================================================
-import http.server, json, os, platform, re, socket, ssl, subprocess, sys, time, uuid
+import http.server, json, os, platform, re, socket, ssl, subprocess, sys, threading, time, uuid
 import urllib.request
 from urllib.parse import urlparse, parse_qs
 
@@ -382,15 +382,43 @@ def health():
     return h
 
 
-def git_update():
-    if not IS_LINUX:
-        return {'ok': False, 'msg': 'Nur auf dem Pi.'}
+def git_run(args, timeout=30):
     try:
-        r = subprocess.run(['git', '-C', DIR, 'pull', '--ff-only'],
-                           capture_output=True, text=True, timeout=30)
-        return {'ok': r.returncode == 0, 'msg': (r.stdout + r.stderr).strip()[:300]}
+        r = subprocess.run(['git', '-C', DIR] + args, capture_output=True, text=True, timeout=timeout)
+        return r.returncode, (r.stdout + r.stderr).strip()
     except Exception as e:
-        return {'ok': False, 'msg': str(e)[:200]}
+        return 1, str(e)
+
+
+def update_check():
+    """Mit GitHub abgleichen: gibt es eine neuere Version?"""
+    code, _ = git_run(['rev-parse', '--is-inside-work-tree'], timeout=6)
+    if code != 0:
+        return {'git': False,
+                'msg': 'Kein Git-Repo – Update nur möglich, wenn per git geklont wurde.'}
+    git_run(['fetch', '--quiet'], timeout=30)
+    _, local  = git_run(['rev-parse', 'HEAD'])
+    _, remote = git_run(['rev-parse', '@{u}'])
+    _, behind = git_run(['rev-list', '--count', 'HEAD..@{u}'])
+    _, url    = git_run(['config', '--get', 'remote.origin.url'])
+    _, lmsg   = git_run(['log', '-1', '--format=%h %s', 'HEAD'])
+    _, rmsg   = git_run(['log', '-1', '--format=%h %s', '@{u}'])
+    bn = int(behind) if behind.strip().isdigit() else 0
+    return {'git': True, 'available': bn > 0, 'behind': bn,
+            'current': local[:7], 'latest': remote[:7],
+            'currentMsg': lmsg, 'latestMsg': rmsg, 'url': url}
+
+
+def update_apply():
+    """Update holen (git pull) und Dienst neu starten."""
+    code, _ = git_run(['rev-parse', '--is-inside-work-tree'], timeout=6)
+    if code != 0:
+        return {'ok': False, 'msg': 'Kein Git-Repo.'}
+    code, out = git_run(['pull', '--ff-only'], timeout=90)
+    ok = code == 0
+    if ok and IS_LINUX:                       # Dienst neu starten, damit server.py neu lädt
+        threading.Timer(1.2, lambda: os.execv(sys.executable, [sys.executable] + sys.argv)).start()
+    return {'ok': ok, 'msg': out[:400], 'restart': ok and IS_LINUX}
 
 
 def system_info():
@@ -483,6 +511,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._json(time_info())
         if p.startswith('/api/status'):
             return self._json(health())
+        if p.startswith('/api/update/check'):
+            return self._json(update_check())
         return super().do_GET()
 
     def do_POST(self):
@@ -507,8 +537,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if p.startswith('/api/time'):
             b = self._body()
             return self._json(time_set((b.get('timezone') or '').strip(), b.get('ntp')))
-        if p.startswith('/api/update'):
-            return self._json(git_update())
+        if p.startswith('/api/update/apply'):
+            return self._json(update_apply())
 
         if p.startswith('/api/bt/'):
             if not bt_available():
