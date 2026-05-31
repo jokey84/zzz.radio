@@ -80,7 +80,7 @@ echo "$USER_NAME ALL=(ALL) NOPASSWD: /sbin/shutdown, /usr/bin/timedatectl" \
   | sudo tee /etc/sudoers.d/zzzradio >/dev/null
 
 # ---- 5) Gruppen für GPU/Touch unter cage -----------------------------------
-sudo usermod -aG video,render,input "$USER_NAME" || true
+sudo usermod -aG bluetooth,video,render,input "$USER_NAME" || true
 
 # ---- 6) Kiosk-Launcher (cage startet Chromium im Vollbild) -----------------
 echo "▶ Kiosk-Launcher erstellen …"
