@@ -104,9 +104,10 @@ cp -r /media/$USER/*/sleep-radio ~/zzz.radio
 scp -r sleep-radio <benutzer>@zzzradio.local:~/zzz.radio
 ```
 
-**C) Per Git** (falls du es in ein Repo gelegt hast):
+**C) Per Git:**
 ```bash
-git clone <DEINE-REPO-URL> ~/zzz.radio
+sudo apt install -y git    # auf Pi OS Lite noch nicht vorinstalliert
+git clone https://github.com/jokey84/zzz.radio.git ~/zzz.radio
 ```
 
 Wichtig: Der **`sounds/`-Ordner mit den `.ogg`-Dateien muss mitkopiert werden** –

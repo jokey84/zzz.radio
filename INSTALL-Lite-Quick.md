@@ -20,10 +20,12 @@ Vom PC:
 ssh <benutzer>@zzzradio.local
 ```
 
-## 3. zzz.radio holen
-**Per Git** (empfohlen):
+## 3. git installieren & zzz.radio holen
+Auf Pi OS **Lite ist `git` noch nicht dabei** – erst installieren, dann klonen:
 ```bash
-git clone https://github.com/<DEIN-GITHUB>/zzz.radio.git ~/zzz.radio
+sudo apt update
+sudo apt install -y git
+git clone https://github.com/jokey84/zzz.radio.git ~/zzz.radio
 ```
 *oder* den Ordner per USB/`scp` nach `~/zzz.radio` kopieren
 (**inkl. `sounds/`-Ordner!**).
