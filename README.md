@@ -130,9 +130,11 @@ System-Lautstärke über `pactl`, nur Pi).
   (Aus / Aurora / Nebel / Lava / Plasma / Bokeh / Atem / Sterne), **Bewegung**
   (Aus / Langsam / Normal / Schnell) und ob der Effekt auch im App-Hintergrund
   läuft; Screensaver sofort starten.
+- **Update** — verbindet sich mit **GitHub**, zeigt installierte vs. neueste
+  Version und installiert per Knopfdruck (`git pull` + automatischer Neustart).
 - **System** — App-Version, Hostname, OS, **Pi-Status** (CPU-Temperatur,
   Auslastung, Speicher, Datenträger, Laufzeit); **App neu laden**, **Pi neu
-  starten/herunterfahren**, **Nach Updates suchen** (git pull), **Werkseinstellungen**.
+  starten/herunterfahren**, **Werkseinstellungen**.
 - **Über** — Version & Info.
 
 > Die echten Systeminfos, Bluetooth und Neustart/Herunterfahren brauchen
