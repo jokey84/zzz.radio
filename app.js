@@ -834,8 +834,10 @@ function showPresetsDialog() {
     modalMsg.appendChild(el('div', 'preset-title', 'Preset laden'));
     soundPresets.forEach((p, i) => {
       const row = el('div', 'preset-row');
-      const load = el('button', 'preset-load',
-        escapeHtml(p.name) + '  ·  ' + ((p.active || []).length) + ' Sounds');
+      const load = el('button', 'set-item preset-load',
+        '<span class="si-ico">🎚️</span>' +
+        '<span class="si-label">' + escapeHtml(p.name) + '</span>' +
+        '<span class="si-val">' + ((p.active || []).length) + ' Sounds</span>');
       load.addEventListener('click', () => { modal.classList.add('hidden'); applyPreset(p); });
       const del = el('button', 'preset-del', '🗑');
       del.addEventListener('click', () => { soundPresets.splice(i, 1); saveSoundPresets(); showPresetsDialog(); });
