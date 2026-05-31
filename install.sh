@@ -20,9 +20,13 @@ sudo apt install -y \
   network-manager pipewire-pulse pulseaudio-utils upower \
   fonts-dejavu-core
 
-# ---- 2) Display: Waveshare 7.9" 400x1280 -----------------------------------
+# ---- 2) Display: Waveshare 7.9" 400x1280 + TOUCH ---------------------------
+# ROTATE: 0 = Hochformat (Standard). 90/180/270, falls anders montiert.
+#   Aufruf z.B.:  ROTATE=90 ./install.sh
+ROTATE="${ROTATE:-0}"
 CFG=/boot/firmware/config.txt
 [ -f "$CFG" ] || CFG=/boot/config.txt
+
 if ! grep -q "hdmi_timings=400 0 220" "$CFG"; then
   echo "▶ Display-Timings (400x1280) eintragen …"
   sudo tee -a "$CFG" >/dev/null <<'EOF'
@@ -32,6 +36,29 @@ hdmi_group=2
 hdmi_mode=87
 hdmi_timings=400 0 220 32 110 1280 0 10 10 10 0 0 0 60 0 59400000 3
 EOF
+fi
+
+# Drehung des Bildes (nur falls gewünscht)
+if [ "$ROTATE" != "0" ] && ! grep -q "video=HDMI-A-1:400x1280" "$CFG"; then
+  echo "▶ Bild um ${ROTATE}° drehen …"
+  echo "video=HDMI-A-1:400x1280M@60,rotate=$ROTATE" | sudo tee -a "$CFG" >/dev/null
+fi
+
+# TOUCH: Kalibrierung passend zur Drehung (Touch folgt der Drehung sonst NICHT)
+echo "▶ Touch einrichten …"
+TOUCHRULE=/etc/udev/rules.d/99-zzzradio-touch.rules
+case "$ROTATE" in
+  90)  MAT="0 -1 1 1 0 0" ;;
+  180) MAT="-1 0 1 0 -1 1" ;;
+  270) MAT="0 1 0 -1 0 1" ;;
+  *)   MAT="" ;;
+esac
+if [ -n "$MAT" ]; then
+  echo "SUBSYSTEM==\"input\", ENV{ID_INPUT_TOUCHSCREEN}==\"1\", ENV{LIBINPUT_CALIBRATION_MATRIX}=\"$MAT\"" \
+    | sudo tee "$TOUCHRULE" >/dev/null
+  sudo udevadm control --reload 2>/dev/null || true
+else
+  sudo rm -f "$TOUCHRULE" 2>/dev/null || true   # Hochformat: keine Matrix nötig
 fi
 
 # ---- 3) Bildschirm nicht abdunkeln -----------------------------------------

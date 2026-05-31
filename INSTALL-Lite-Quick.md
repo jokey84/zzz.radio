@@ -35,8 +35,15 @@ chmod +x install.sh
 ./install.sh
 ```
 Das Script installiert Pakete (chromium, cage, python3, nmcli, pactl, upower,
-git), trägt die **Display-Timings (400×1280)** ein, richtet **Auto-Login** und
-**Kiosk-Autostart** ein und setzt die nötigen **sudo-Rechte**.
+git), trägt die **Display-Timings (400×1280)** ein, richtet **Touch** ein
+(inkl. Zugriffsrechte), aktiviert **Auto-Login** + **Kiosk-Autostart** und setzt
+die nötigen **sudo-Rechte**.
+
+> **Anders montiert?** Für gedrehten Einbau einfach mit Drehung aufrufen –
+> das dreht **Bild und Touch zusammen**:
+> ```bash
+> ROTATE=90 ./install.sh    # oder 180 / 270
+> ```
 
 ## 5. Neu starten
 ```bash
