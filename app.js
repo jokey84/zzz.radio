@@ -725,6 +725,28 @@ const dimBtn = document.getElementById('dimBtn');
 dimBtn.addEventListener('click', () => dimOverlay.classList.remove('hidden'));
 dimOverlay.addEventListener('click', () => dimOverlay.classList.add('hidden'));
 
+/* Wassertropfen im Screensaver (nur wenn in den Einstellungen aktiviert) */
+const ssDrops = document.getElementById('ssDrops');
+let dropsTimer = null;
+function spawnDrop() {
+  const d = document.createElement('div');
+  d.className = 'water-drop';
+  d.style.left = (6 + Math.random() * 88) + '%';
+  d.style.top  = (8 + Math.random() * 84) + '%';
+  ssDrops.appendChild(d);
+  setTimeout(() => d.remove(), 2700);
+}
+function startDrops() {
+  stopDrops();
+  if (!readNum('ssDrops', 0)) return;
+  spawnDrop();
+  dropsTimer = setInterval(() => { if (Math.random() < 0.85) spawnDrop(); }, 850);
+}
+function stopDrops() { clearInterval(dropsTimer); dropsTimer = null; if (ssDrops) ssDrops.innerHTML = ''; }
+new MutationObserver(() => {
+  if (!dimOverlay.classList.contains('hidden')) startDrops(); else stopDrops();
+}).observe(dimOverlay, { attributes: true, attributeFilter: ['class'] });
+
 /* Nachtlicht / Blaulichtfilter — 0=aus, 1=sanft, 2=mittel, 3=stark */
 const warmOverlay = document.getElementById('warmOverlay');
 const warmBtn = document.getElementById('warmBtn');
@@ -1567,6 +1589,20 @@ const PANELS = {
         mc.appendChild(c);
       });
       b.appendChild(el('div', 'set-note', 'Tempo der Animation – „Aus" friert das Bild ein.'));
+
+      b.appendChild(setSection('Wassertropfen (Screensaver)'));
+      const wd = el('div', 'set-choices'); b.appendChild(wd);
+      const wdCur = readNum('ssDrops', 0);
+      [{v:0,l:'Aus'},{v:1,l:'An'}].forEach(o => {
+        const c = el('button', 'chip' + (o.v === wdCur ? ' active' : ''), o.l);
+        c.addEventListener('click', () => {
+          save('ssDrops', o.v);
+          if (!dimOverlay.classList.contains('hidden')) { o.v ? startDrops() : stopDrops(); }
+          refresh();
+        });
+        wd.appendChild(c);
+      });
+      b.appendChild(el('div', 'set-note', 'Sanfte Tropfen-Ringe im Uhr-Screensaver (Idle-Modus).'));
 
       b.appendChild(setSection('Aktion'));
       const now = el('button', 'set-action', '🌑 Bildschirmschoner jetzt starten');

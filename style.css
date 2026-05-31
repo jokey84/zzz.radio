@@ -730,6 +730,30 @@ body {
   .ss-blob, .aura-layer::before, .aura-layer::after { animation: none !important; }
 }
 
+/* Wassertropfen im Screensaver (per JS gespawnt) */
+.ss-drops { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.water-drop {
+  position: absolute; width: 0; height: 0; transform: translate(-50%,-50%);
+  border-radius: 50%; border: 2px solid rgba(150,200,255,.55);
+  box-shadow: 0 0 10px rgba(120,180,255,.35);
+  animation: waterRipple 2.6s ease-out forwards;
+}
+.water-drop::after {       /* zweiter, nachlaufender Ring */
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  border: 1px solid rgba(150,200,255,.4);
+  animation: waterRipple2 2.6s ease-out .25s forwards;
+}
+@keyframes waterRipple {
+  0%   { width: 0; height: 0; opacity: 0; border-width: 3px; }
+  12%  { opacity: .8; }
+  100% { width: 150px; height: 150px; opacity: 0; border-width: 1px; }
+}
+@keyframes waterRipple2 {
+  0%   { transform: scale(.2); opacity: .5; }
+  100% { transform: scale(1); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .water-drop { animation: none; display: none; } }
+
 .ss-brand {
   position: absolute; top: 42px; left: 0; right: 0; z-index: 1; text-align: center;
   font-size: 15px; font-weight: 600; letter-spacing: 4px; color: #56627a;
