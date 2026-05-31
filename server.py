@@ -185,9 +185,12 @@ def bt_list():
         if len(parts) >= 3 and parts[0] == 'Device':
             mac, name = parts[1], parts[2]
             info = sh(['bluetoothctl', 'info', mac])
+            nm = re.search(r'(?m)^\s*Name:\s*(.+?)\s*$', info)
+            al = re.search(r'(?m)^\s*Alias:\s*(.+?)\s*$', info)
+            friendly = (nm.group(1) if nm else '') or (al.group(1) if al else '') or name
             bm = re.search(r'Battery Percentage:.*\((\d+)\)', info)
             devices.append({
-                'mac': mac, 'name': name,
+                'mac': mac, 'name': friendly,
                 'paired':    'Paired: yes' in info,
                 'connected': 'Connected: yes' in info,
                 'battery':   int(bm.group(1)) if bm else None,
@@ -219,7 +222,7 @@ def sink_volume():
     return int(m.group(1)) if m else None
 
 
-def bt_scan(timeout=8):
+def bt_scan(timeout=12):
     sh(['bluetoothctl', 'power', 'on'])
     sh(['bluetoothctl', '--timeout', str(timeout), 'scan', 'on'], timeout=timeout + 5)
     return bt_list()

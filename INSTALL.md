@@ -70,7 +70,7 @@ sudo raspi-config
 
 ```bash
 sudo apt install -y chromium python3 git \
-  network-manager pipewire-pulse pulseaudio-utils upower
+  network-manager pipewire-pulse pulseaudio-utils upower fonts-noto-color-emoji
 ```
 > Heißt das Chromium-Paket „has no installation candidate"? Dann nutzt dein OS
 > den alten Namen: `chromium-browser` statt `chromium` installieren. (Das
@@ -81,6 +81,7 @@ sudo apt install -y chromium python3 git \
 - **network-manager** (`nmcli`) – WLAN scannen/verbinden im Menü
 - **pulseaudio-utils** (`pactl`) – Audio-Ausgang umschalten + Lautstärke-HUD
 - **upower** – Akkustand des Bluetooth-Lautsprechers
+- **fonts-noto-color-emoji** – damit die Emoji-Symbole in der Oberfläche angezeigt werden
 - **git** – „Nach Updates suchen"
 
 Optional, falls du im Suchfeld **tippen** willst (Bildschirmtastatur des

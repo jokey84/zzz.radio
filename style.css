@@ -27,7 +27,8 @@ html {
 html, body {
   margin: 0; height: 100%;
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans",
+    sans-serif, "Noto Color Emoji", "Segoe UI Emoji";
   user-select: none; overflow: hidden;
 }
 body {

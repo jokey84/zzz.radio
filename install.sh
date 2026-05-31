@@ -22,7 +22,8 @@ echo "   Chromium-Paket: $CHROME_PKG"
 sudo apt install -y \
   cage "$CHROME_PKG" python3 git \
   network-manager pipewire-pulse pulseaudio-utils upower \
-  fonts-dejavu-core
+  fonts-dejavu-core fonts-noto-color-emoji
+fc-cache -f >/dev/null 2>&1 || true   # Emoji-Schrift sofort verfügbar machen
 
 # ---- 2) Display: Waveshare 7.9" 400x1280 + TOUCH ---------------------------
 # ROTATE: 0 = Hochformat (Standard). 90/180/270, falls anders montiert.

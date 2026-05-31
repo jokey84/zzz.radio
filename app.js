@@ -1239,7 +1239,7 @@ const PANELS = {
 
       b.appendChild(setSection('Neue Lautsprecher'));
       const scanRes = el('div');
-      const scanBtn = el('button', 'set-action', '🔍 Lautsprecher suchen (ca. 8 s)');
+      const scanBtn = el('button', 'set-action', '🔍 Lautsprecher suchen (ca. 12 s)');
       scanBtn.addEventListener('click', () => {
         scanRes.innerHTML = '';
         scanRes.appendChild(el('div', 'search-hint', 'Suche läuft …'));
