@@ -229,14 +229,25 @@ def bt_scan(timeout=12):
 
 
 def bt_pair(mac):
-    """Koppeln in EINER bluetoothctl-Sitzung mit Agent (zuverlässig für Lautsprecher)."""
+    """Koppeln in EINER bluetoothctl-Sitzung mit Agent. Gibt {ok, log} zurück.
+    Wichtig: stdout wird laufend in einem Thread abgeholt, sonst blockiert
+    bluetoothctl beim Scannen (voller Ausgabe-Puffer)."""
     if not (IS_LINUX and valid_mac(mac)):
-        return False
+        return {'ok': False, 'log': 'nicht verfügbar'}
     try:
         p = subprocess.Popen(['bluetoothctl'], stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    except Exception:
-        return False
+    except Exception as e:
+        return {'ok': False, 'log': str(e)}
+
+    lines = []
+    def drain():
+        try:
+            for ln in p.stdout:
+                lines.append(ln)
+        except Exception:
+            pass
+    threading.Thread(target=drain, daemon=True).start()
 
     def send(cmd, wait):
         try:
@@ -250,19 +261,24 @@ def bt_pair(mac):
     send('default-agent', 0.4)
     send('pairable on', 0.4)
     send('scan on', 8.0)                  # Gerät entdecken
-    send('pair ' + mac, 9.0)
+    send('pair ' + mac, 10.0)
     send('trust ' + mac, 1.0)            # damit es sich künftig automatisch verbindet
     send('connect ' + mac, 6.0)
     send('scan off', 0.4)
     send('quit', 0.3)
     try:
-        p.communicate(timeout=8)
+        p.wait(timeout=5)
     except Exception:
         try: p.kill()
         except Exception: pass
 
+    out = ''.join(lines)
     info = sh(['bluetoothctl', 'info', mac])
-    return ('Connected: yes' in info) or ('Paired: yes' in info)
+    ok = ('Connected: yes' in info) or ('Paired: yes' in info)
+    hints = [l.strip() for l in out.splitlines() if any(k in l for k in (
+        'Failed', 'successful', 'not available', 'AuthenticationFailed',
+        'AlreadyExists', 'NotReady', 'org.bluez.Error', 'Agent', 'PIN', 'Pairing'))]
+    return {'ok': ok, 'log': ' | '.join(hints[-6:])[:300]}
 
 
 def bt_connect(mac):
@@ -589,8 +605,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             mac = self._body().get('mac')
             if not valid_mac(mac):
                 return self._json({'ok': False, 'msg': 'Ungültige MAC-Adresse.'})
-            fn = {'pair': bt_pair, 'connect': bt_connect,
-                  'disconnect': bt_disconnect, 'remove': bt_remove}.get(action)
+            if action == 'pair':
+                r = bt_pair(mac)
+                return self._json({'ok': bool(r.get('ok')), 'msg': r.get('log', ''), 'devices': bt_list()})
+            fn = {'connect': bt_connect, 'disconnect': bt_disconnect, 'remove': bt_remove}.get(action)
             if not fn:
                 return self.send_error(404)
             return self._json({'ok': bool(fn(mac)), 'devices': bt_list()})

@@ -1126,7 +1126,9 @@ function btRow(dev, reload, isNew) {
       pair.textContent = 'koppelt …'; pair.disabled = true;
       btApi('pair', dev.mac).then(d => {
         if (d.ok) localStorage.setItem('btSpeaker', dev.mac);
-        else uiAlert('Koppeln fehlgeschlagen.\n\n• Lautsprecher in den Pairing-Modus bringen ' +
+        else uiAlert('Koppeln fehlgeschlagen.\n' +
+                   (d.msg ? '\nMeldung: ' + d.msg + '\n' : '') +
+                   '\n• Lautsprecher in den Pairing-Modus bringen ' +
                    '(meist Taste lange halten, bis die LED schnell blinkt).\n' +
                    '• Nah an den Pi halten und „suchen" erneut.\n' +
                    '• War er schon mal verbunden? Mit 🗑 entfernen und neu koppeln.');
