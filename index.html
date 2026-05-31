@@ -75,12 +75,22 @@
   <footer class="bottombar">
     <button id="timerBtn" class="foot-btn">⏱ Timer</button>
     <button id="warmBtn" class="foot-btn">🌙 Warm</button>
+    <button id="briBtn" class="foot-btn">🔆 Licht</button>
     <button id="dimBtn" class="foot-btn">🕐 Uhr</button>
     <button id="stopAll" class="foot-btn">⏹ Aus</button>
   </footer>
 
   <!-- Nachtlicht / Blaulichtfilter (warmer Schleier über allem) -->
   <div id="warmOverlay" class="warm-overlay"></div>
+
+  <!-- Helligkeit (weiche Abdunklung, 6 Stufen) -->
+  <div id="brightnessOverlay" class="brightness-overlay"></div>
+
+  <!-- Helligkeits-HUD -->
+  <div id="briHud" class="bri-hud hidden" aria-hidden="true">
+    <span class="bri-ico">🔆</span>
+    <span class="bri-segs"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+  </div>
 
   <!-- Eigene On-Screen-Tastatur (wird per JS gefüllt) -->
   <div id="osk" class="osk hidden" aria-hidden="true"></div>

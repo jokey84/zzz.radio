@@ -742,6 +742,31 @@ warmBtn.addEventListener('click', () => {
 });
 applyWarm(readNum('warmLevel', 0));   // gespeicherten Zustand wiederherstellen
 
+/* Helligkeit – 6 Stufen (weiche Abdunklung). 0 = min (dunkel) … 5 = max (hell) */
+const brightnessOverlay = document.getElementById('brightnessOverlay');
+const briBtn  = document.getElementById('briBtn');
+const briHud  = document.getElementById('briHud');
+const briSegs = briHud.querySelectorAll('.bri-segs i');
+const BRI_DIM = [0.78, 0.62, 0.46, 0.30, 0.15, 0.0];   // Overlay-Deckkraft je Stufe
+let briHudTimer = null;
+function applyBrightness(level) {
+  level = Math.max(0, Math.min(5, level));
+  save('briLevel', level);
+  brightnessOverlay.style.opacity = BRI_DIM[level];
+}
+function showBriHud(level) {
+  briSegs.forEach((s, i) => s.classList.toggle('on', i <= level));
+  briHud.classList.remove('hidden'); void briHud.offsetWidth; briHud.classList.add('show');
+  clearTimeout(briHudTimer);
+  briHudTimer = setTimeout(() => briHud.classList.remove('show'), 1300);
+}
+briBtn.addEventListener('click', () => {
+  const next = (readNum('briLevel', 5) + 5) % 6;       // eine Stufe dunkler; nach min zurück auf max
+  applyBrightness(next);
+  showBriHud(next);
+});
+applyBrightness(readNum('briLevel', 5));               // gespeicherte Helligkeit wiederherstellen
+
 /* Hintergrund-Effekt (Screensaver + optional ganze App) */
 const FX_LIST = ['none', 'aurora', 'nebula', 'stars', 'lava', 'plasma', 'bokeh', 'atem'];
 const FX_MOTION = { off: '1', slow: '1.8', normal: '1', fast: '0.55' };
