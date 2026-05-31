@@ -228,32 +228,55 @@ def bt_scan(timeout=12):
     return bt_list()
 
 
+BT_LOG = '/tmp/zzzradio-bt.log'
+
+def _btlog(text):
+    try:
+        with open(BT_LOG, 'a') as f:
+            f.write(text)
+    except Exception:
+        pass
+
+def bt_log_read():
+    try:
+        with open(BT_LOG) as f:
+            return f.read()[-6000:]
+    except Exception:
+        return '(noch kein Pairing-Log – erst einen Koppel-Versuch starten)'
+
 def bt_pair(mac):
     """Koppeln in EINER bluetoothctl-Sitzung mit Agent. Gibt {ok, log} zurück.
-    Wichtig: stdout wird laufend in einem Thread abgeholt, sonst blockiert
-    bluetoothctl beim Scannen (voller Ausgabe-Puffer)."""
+    Vollständiges Protokoll landet in BT_LOG. stdout wird laufend abgeholt,
+    sonst blockiert bluetoothctl beim Scannen (voller Ausgabe-Puffer)."""
     if not (IS_LINUX and valid_mac(mac)):
         return {'ok': False, 'log': 'nicht verfügbar'}
+    try:
+        open(BT_LOG, 'w').close()                       # frisches Log
+    except Exception:
+        pass
+    _btlog('=== Pairing %s  (Benutzer: %s) ===\n' % (mac, os.environ.get('USER', '?')))
     try:
         p = subprocess.Popen(['bluetoothctl'], stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     except Exception as e:
+        _btlog('Popen-Fehler: %s\n' % e)
         return {'ok': False, 'log': str(e)}
 
     lines = []
     def drain():
         try:
             for ln in p.stdout:
-                lines.append(ln)
+                lines.append(ln); _btlog(ln)
         except Exception:
             pass
     threading.Thread(target=drain, daemon=True).start()
 
     def send(cmd, wait):
+        _btlog('\n> %s\n' % cmd)
         try:
             p.stdin.write(cmd + '\n'); p.stdin.flush()
-        except Exception:
-            pass
+        except Exception as e:
+            _btlog('  (stdin-Fehler: %s)\n' % e)
         time.sleep(wait)
 
     send('power on', 1.0)
@@ -261,7 +284,7 @@ def bt_pair(mac):
     send('default-agent', 0.4)
     send('pairable on', 0.4)
     send('scan on', 8.0)                  # Gerät entdecken
-    send('pair ' + mac, 10.0)
+    send('pair ' + mac, 12.0)
     send('trust ' + mac, 1.0)            # damit es sich künftig automatisch verbindet
     send('connect ' + mac, 6.0)
     send('scan off', 0.4)
@@ -274,7 +297,9 @@ def bt_pair(mac):
 
     out = ''.join(lines)
     info = sh(['bluetoothctl', 'info', mac])
+    _btlog('\n--- info nach Pairing ---\n' + info + '\n')
     ok = ('Connected: yes' in info) or ('Paired: yes' in info)
+    _btlog('=== Ergebnis: %s ===\n' % ('OK' if ok else 'FEHLGESCHLAGEN'))
     hints = [l.strip() for l in out.splitlines() if any(k in l for k in (
         'Failed', 'successful', 'not available', 'AuthenticationFailed',
         'AlreadyExists', 'NotReady', 'org.bluez.Error', 'Agent', 'PIN', 'Pairing'))]
@@ -553,6 +578,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if p.startswith('/api/bt/battery'):
             q = parse_qs(urlparse(p).query)
             return self._json({'battery': bt_battery((q.get('mac') or [''])[0])})
+        if p.startswith('/api/bt/log'):
+            return self._json({'log': bt_log_read()})
         if p.rstrip('/') == '/api/bt' or p.startswith('/api/bt?'):
             avail = bt_available()
             return self._json({'available': avail, 'devices': bt_list() if avail else []})

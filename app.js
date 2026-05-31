@@ -1313,6 +1313,13 @@ const PANELS = {
       b.appendChild(el('div', 'set-note',
         'Der mit ★ markierte Lautsprecher wird automatisch verbunden, sobald etwas ' +
         'spielt, und nach 1 Minute Stille getrennt (Abschalt-Signal).'));
+
+      const logBtn = el('button', 'set-action', '🔎 Pairing-Log anzeigen');
+      logBtn.addEventListener('click', () => {
+        fetch('/api/bt/log').then(r => r.json()).then(d => uiAlert(d.log || '(leer)'))
+          .catch(() => uiAlert('Kein lokaler Dienst erreichbar.'));
+      });
+      b.appendChild(logBtn);
     }
   },
 
