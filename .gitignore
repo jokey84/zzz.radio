@@ -4,5 +4,8 @@ Thumbs.db
 # Editor
 .vscode/
 *.swp
+# Python
+__pycache__/
+*.pyc
 # Vom Installer auf dem Pi erzeugt
 launch-cage.sh
