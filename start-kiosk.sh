@@ -36,9 +36,10 @@ CHROME=$(command -v chromium-browser || command -v chromium)
 "$CHROME" \
   --kiosk \
   --app="http://localhost:$PORT/index.html" \
+  --disable-features=Translate,TranslateUI \
+  --lang=de --no-first-run \
   --noerrdialogs \
   --disable-infobars \
-  --disable-translate \
   --disable-pinch \
   --overscroll-history-navigation=0 \
   --autoplay-policy=no-user-gesture-required \

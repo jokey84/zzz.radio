@@ -767,6 +767,30 @@ briBtn.addEventListener('click', () => {
 });
 applyBrightness(readNum('briLevel', 5));               // gespeicherte Helligkeit wiederherstellen
 
+/* Eigene Dialoge statt Chromium-Popups (sehen aufs Hochformat zugeschnitten aus) */
+const modal     = document.getElementById('modal');
+const modalMsg  = document.getElementById('modalMsg');
+const modalBtns = document.getElementById('modalBtns');
+function uiDialog(msg, buttons) {
+  return new Promise(resolve => {
+    modalMsg.textContent = msg;
+    modalBtns.innerHTML = '';
+    buttons.forEach(b => {
+      const btn = el('button', 'modal-btn' + (b.kind ? ' ' + b.kind : ''), b.label);
+      btn.addEventListener('click', () => { modal.classList.add('hidden'); resolve(b.value); });
+      modalBtns.appendChild(btn);
+    });
+    modal.classList.remove('hidden');
+  });
+}
+function uiAlert(msg) { return uiDialog(msg, [{ label: 'OK', value: true, kind: 'primary' }]); }
+function uiConfirm(msg, okLabel, danger) {
+  return uiDialog(msg, [
+    { label: 'Abbrechen', value: false },
+    { label: okLabel || 'OK', value: true, kind: danger ? 'danger' : 'primary' },
+  ]);
+}
+
 /* Hintergrund-Effekt (Screensaver + optional ganze App) */
 const FX_LIST = ['none', 'aurora', 'nebula', 'stars', 'lava', 'plasma', 'bokeh', 'atem'];
 const FX_MOTION = { off: '1', slow: '1.8', normal: '1', fast: '0.55' };
@@ -1065,13 +1089,15 @@ function infoRow(parent, k, v) {
 
 /* Neustart/Herunterfahren über das lokale Backend */
 function powerAction(action, msg) {
-  if (!confirm(msg)) return;
-  fetch('/api/power', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action })
-  }).then(r => r.json())
-    .then(d => alert(d.ok ? 'Wird ausgeführt …' : (d.msg || 'Nicht möglich')))
-    .catch(() => alert('Keine Verbindung zum lokalen Dienst (server.py).'));
+  uiConfirm(msg, 'OK', true).then(ok => {
+    if (!ok) return;
+    fetch('/api/power', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action })
+    }).then(r => r.json())
+      .then(d => uiAlert(d.ok ? 'Wird ausgeführt …' : (d.msg || 'Nicht möglich')))
+      .catch(() => uiAlert('Keine Verbindung zum lokalen Dienst (server.py).'));
+  });
 }
 
 /* Bluetooth-Aktion ans Backend schicken */
@@ -1100,7 +1126,7 @@ function btRow(dev, reload, isNew) {
       pair.textContent = 'koppelt …'; pair.disabled = true;
       btApi('pair', dev.mac).then(d => {
         if (d.ok) localStorage.setItem('btSpeaker', dev.mac);
-        else alert('Koppeln fehlgeschlagen.\n\n• Lautsprecher in den Pairing-Modus bringen ' +
+        else uiAlert('Koppeln fehlgeschlagen.\n\n• Lautsprecher in den Pairing-Modus bringen ' +
                    '(meist Taste lange halten, bis die LED schnell blinkt).\n' +
                    '• Nah an den Pi halten und „suchen" erneut.\n' +
                    '• War er schon mal verbunden? Mit 🗑 entfernen und neu koppeln.');
@@ -1517,18 +1543,20 @@ const PANELS = {
         });
       };
       const doApply = (btn) => {
-        if (!confirm('Update installieren und zzz.radio neu starten?')) return;
-        btn.textContent = 'aktualisiere …'; btn.disabled = true;
-        fetch('/api/update/apply', { method: 'POST' }).then(r => r.json()).then(d => {
-          if (d.ok) {
+        uiConfirm('Update installieren und zzz.radio neu starten?').then(ok => {
+          if (!ok) return;
+          btn.textContent = 'aktualisiere …'; btn.disabled = true;
+          fetch('/api/update/apply', { method: 'POST' }).then(r => r.json()).then(d => {
+            if (d.ok) {
+              status.innerHTML = ''; applyWrap.innerHTML = '';
+              status.appendChild(el('div', 'update-badge ok', '✓ Aktualisiert – Neustart …'));
+              setTimeout(() => location.reload(), 5000);
+            } else { btn.textContent = '⬇️ Jetzt aktualisieren'; btn.disabled = false; uiAlert('Fehler: ' + (d.msg || '')); }
+          }).catch(() => {       // Dienst startet neu → Verbindung kurz weg ist normal
             status.innerHTML = ''; applyWrap.innerHTML = '';
-            status.appendChild(el('div', 'update-badge ok', '✓ Aktualisiert – Neustart …'));
-            setTimeout(() => location.reload(), 5000);
-          } else { btn.textContent = '⬇️ Jetzt aktualisieren'; btn.disabled = false; alert('Fehler: ' + (d.msg || '')); }
-        }).catch(() => {       // Dienst startet neu → Verbindung kurz weg ist normal
-          status.innerHTML = ''; applyWrap.innerHTML = '';
-          status.appendChild(el('div', 'update-badge ok', '✓ Neustart …'));
-          setTimeout(() => location.reload(), 6000);
+            status.appendChild(el('div', 'update-badge ok', '✓ Neustart …'));
+            setTimeout(() => location.reload(), 6000);
+          });
         });
       };
 
@@ -1574,8 +1602,10 @@ const PANELS = {
       b.appendChild(shut);
       const reset = el('button', 'set-action danger', '🧹 Werkseinstellungen');
       reset.addEventListener('click', () => {
-        if (!confirm('Alle lokalen App-Einstellungen zurücksetzen?')) return;
-        localStorage.clear(); location.reload();
+        uiConfirm('Alle lokalen App-Einstellungen zurücksetzen?', 'Zurücksetzen', true).then(ok => {
+          if (!ok) return;
+          localStorage.clear(); location.reload();
+        });
       });
       b.appendChild(reset);
       b.appendChild(el('div', 'set-note',

@@ -93,7 +93,9 @@ CHROME="\$(command -v chromium || command -v chromium-browser)"
 exec cage -- "\$CHROME" \\
   --kiosk --app=http://localhost:8080/index.html \\
   --enable-features=UseOzonePlatform --ozone-platform=wayland \\
-  --noerrdialogs --disable-infobars --disable-translate --disable-pinch \\
+  --disable-features=Translate,TranslateUI \\
+  --lang=de --no-first-run --disable-pinch \\
+  --noerrdialogs --disable-infobars \\
   --overscroll-history-navigation=0 \\
   --autoplay-policy=no-user-gesture-required \\
   --check-for-update-interval=31536000
