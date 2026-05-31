@@ -460,13 +460,7 @@ body {
 .master-slider { flex: 1; }
 
 /* ===== Sounds: Preset-Leiste (Reset / Speichern / Presets) ===== */
-.sound-actions { flex: 0 0 auto; display: flex; gap: 7px; padding: 4px 12px 8px; }
-.sa-btn {
-  flex: 1; padding: 12px 0; border-radius: 11px; font-size: 13px; font-weight: 700;
-  border: 1px solid rgba(255,255,255,.16); color: var(--text);
-  background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
-}
-.sa-btn:active { background: linear-gradient(180deg, rgba(255,255,255,.2), rgba(255,255,255,.08)); }
+.sound-actions { flex: 0 0 auto; display: flex; gap: 7px; padding: 6px 10px 4px; }
 
 /* Preset-Liste im Dialog */
 .preset-title { font-weight: 700; margin-bottom: 10px; color: var(--text-dim);
