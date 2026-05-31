@@ -229,18 +229,50 @@ def bt_scan(timeout=12):
 
 
 def bt_pair(mac):
-    sh(['bluetoothctl', 'power', 'on'])
-    sh(['bluetoothctl', '--timeout', '5', 'scan', 'on'], timeout=9)
-    sh(['bluetoothctl', 'pair', mac], timeout=25)
-    sh(['bluetoothctl', 'trust', mac])
-    c = sh(['bluetoothctl', 'connect', mac], timeout=15)
-    return 'Connection successful' in c or 'Connected: yes' in sh(['bluetoothctl', 'info', mac])
+    """Koppeln in EINER bluetoothctl-Sitzung mit Agent (zuverlässig für Lautsprecher)."""
+    if not (IS_LINUX and valid_mac(mac)):
+        return False
+    try:
+        p = subprocess.Popen(['bluetoothctl'], stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    except Exception:
+        return False
+
+    def send(cmd, wait):
+        try:
+            p.stdin.write(cmd + '\n'); p.stdin.flush()
+        except Exception:
+            pass
+        time.sleep(wait)
+
+    send('power on', 1.0)
+    send('agent NoInputNoOutput', 0.4)   # Lautsprecher: „Just Works" automatisch annehmen
+    send('default-agent', 0.4)
+    send('pairable on', 0.4)
+    send('scan on', 8.0)                  # Gerät entdecken
+    send('pair ' + mac, 9.0)
+    send('trust ' + mac, 1.0)            # damit es sich künftig automatisch verbindet
+    send('connect ' + mac, 6.0)
+    send('scan off', 0.4)
+    send('quit', 0.3)
+    try:
+        p.communicate(timeout=8)
+    except Exception:
+        try: p.kill()
+        except Exception: pass
+
+    info = sh(['bluetoothctl', 'info', mac])
+    return ('Connected: yes' in info) or ('Paired: yes' in info)
 
 
 def bt_connect(mac):
     sh(['bluetoothctl', 'power', 'on'])
-    c = sh(['bluetoothctl', 'connect', mac], timeout=15)
-    return 'Connection successful' in c or 'Connected: yes' in sh(['bluetoothctl', 'info', mac])
+    for _ in range(2):
+        c = sh(['bluetoothctl', 'connect', mac], timeout=15)
+        if 'Connection successful' in c or 'Connected: yes' in sh(['bluetoothctl', 'info', mac]):
+            return True
+        time.sleep(1.5)
+    return False
 
 
 def bt_disconnect(mac):

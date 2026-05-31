@@ -1097,10 +1097,13 @@ function btRow(dev, reload, isNew) {
   if (isNew || !dev.paired) {
     const pair = el('button', 'bt-btn', 'Koppeln');
     pair.addEventListener('click', () => {
-      pair.textContent = '…';
+      pair.textContent = 'koppelt …'; pair.disabled = true;
       btApi('pair', dev.mac).then(d => {
         if (d.ok) localStorage.setItem('btSpeaker', dev.mac);
-        else alert('Koppeln fehlgeschlagen. Lautsprecher im Pairing-Modus?');
+        else alert('Koppeln fehlgeschlagen.\n\n• Lautsprecher in den Pairing-Modus bringen ' +
+                   '(meist Taste lange halten, bis die LED schnell blinkt).\n' +
+                   '• Nah an den Pi halten und „suchen" erneut.\n' +
+                   '• War er schon mal verbunden? Mit 🗑 entfernen und neu koppeln.');
         reload && reload();
       });
     });
