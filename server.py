@@ -413,11 +413,15 @@ def update_check():
 
 
 def update_apply():
-    """Update holen (git pull) und Dienst neu starten."""
+    """Sauber auf den GitHub-Stand setzen und Dienst neu starten."""
     code, _ = git_run(['rev-parse', '--is-inside-work-tree'], timeout=6)
     if code != 0:
         return {'ok': False, 'msg': 'Kein Git-Repo.'}
-    code, out = git_run(['pull', '--ff-only'], timeout=90)
+    git_run(['config', 'core.fileMode', 'false'])               # chmod +x nicht als Änderung werten
+    git_run(['fetch', '--prune'], timeout=60)
+    code, out = git_run(['reset', '--hard', '@{u}'], timeout=60)  # hart auf origin/main (keine Merge-Konflikte)
+    if code != 0:
+        code, out = git_run(['reset', '--hard', 'origin/main'], timeout=60)
     ok = code == 0
     if ok and IS_LINUX:                       # Dienst neu starten, damit server.py neu lädt
         threading.Timer(1.2, lambda: os.execv(sys.executable, [sys.executable] + sys.argv)).start()

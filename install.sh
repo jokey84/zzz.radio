@@ -12,6 +12,9 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 USER_NAME="${SUDO_USER:-$USER}"
 echo "▶ zzz.radio Installer  (Ordner: $DIR)"
 
+# Git: Ausführbar-Bit nicht als Änderung werten (sonst blockiert es Updates)
+git -C "$DIR" config core.fileMode false 2>/dev/null || true
+
 # ---- 1) Pakete -------------------------------------------------------------
 echo "▶ Pakete installieren …"
 sudo apt update
