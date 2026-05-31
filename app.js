@@ -797,6 +797,68 @@ function uiConfirm(msg, okLabel, danger) {
   ]);
 }
 
+/* ----- Sound-Presets: Reset / aktuellen Mix speichern / Presets laden ----- */
+let soundPresets = JSON.parse(localStorage.getItem('soundPresets') || '[]');
+function saveSoundPresets() { localStorage.setItem('soundPresets', JSON.stringify(soundPresets)); }
+
+function resetSounds() {
+  sounds.forEach(s => {
+    s.stop(); if (s._card) s._card.classList.remove('on');
+    s.setVolume(0.6);
+    const sl = s._card && s._card.querySelector('.slider'); if (sl) sl.value = 60;
+  });
+  saveActive();
+}
+function applyPreset(p) {
+  sounds.forEach(s => { s.stop(); if (s._card) s._card.classList.remove('on'); });
+  if (p.master != null) {
+    masterSlider.value = Math.round(p.master * 100);
+    save('master', p.master);
+    if (masterGain) masterGain.gain.value = effectiveMaster();
+  }
+  (p.active || []).forEach(a => {
+    const s = sounds.find(x => x.def.id === a.id);
+    if (!s) return;
+    s.setVolume(a.vol);
+    const sl = s._card && s._card.querySelector('.slider'); if (sl) sl.value = Math.round(a.vol * 100);
+    if (s._card) s._card.classList.add('on');
+    s.start();
+  });
+  saveActive();
+}
+function showPresetsDialog() {
+  modalMsg.innerHTML = '';
+  if (!soundPresets.length) {
+    modalMsg.appendChild(el('div', '', 'Noch keine Presets.\nMische Sounds und tippe „💾 Speichern".'));
+  } else {
+    modalMsg.appendChild(el('div', 'preset-title', 'Preset laden'));
+    soundPresets.forEach((p, i) => {
+      const row = el('div', 'preset-row');
+      const load = el('button', 'preset-load',
+        escapeHtml(p.name) + '  ·  ' + ((p.active || []).length) + ' Sounds');
+      load.addEventListener('click', () => { modal.classList.add('hidden'); applyPreset(p); });
+      const del = el('button', 'preset-del', '🗑');
+      del.addEventListener('click', () => { soundPresets.splice(i, 1); saveSoundPresets(); showPresetsDialog(); });
+      row.appendChild(load); row.appendChild(del);
+      modalMsg.appendChild(row);
+    });
+  }
+  modalBtns.innerHTML = '';
+  const close = el('button', 'modal-btn', 'Schließen');
+  close.addEventListener('click', () => modal.classList.add('hidden'));
+  modalBtns.appendChild(close);
+  modal.classList.remove('hidden');
+}
+document.getElementById('soundReset').addEventListener('click', resetSounds);
+document.getElementById('soundSave').addEventListener('click', () => {
+  const active = sounds.filter(s => s.playing).map(s => ({ id: s.def.id, vol: s.volume }));
+  if (!active.length) { uiAlert('Kein Sound aktiv.\nErst Sounds einschalten, dann speichern.'); return; }
+  const p = { name: 'Mix ' + (soundPresets.length + 1), active, master: readNum('master', 0.8) };
+  soundPresets.push(p); saveSoundPresets();
+  uiAlert('Gespeichert als „' + p.name + '".');
+});
+document.getElementById('soundLoad').addEventListener('click', showPresetsDialog);
+
 /* Hintergrund-Effekt (Screensaver + optional ganze App) */
 const FX_LIST = ['none', 'aurora', 'nebula', 'stars', 'lava', 'plasma', 'bokeh', 'atem'];
 const FX_MOTION = { off: '1', slow: '1.8', normal: '1', fast: '0.55' };
