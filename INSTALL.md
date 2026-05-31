@@ -69,11 +69,14 @@ sudo raspi-config
 ## 4. Benötigte Programme installieren
 
 ```bash
-sudo apt install -y chromium-browser python3 git \
+sudo apt install -y chromium python3 git \
   network-manager pipewire-pulse pulseaudio-utils upower
 ```
+> Heißt das Chromium-Paket „has no installation candidate"? Dann nutzt dein OS
+> den alten Namen: `chromium-browser` statt `chromium` installieren. (Das
+> `install.sh` erkennt beides automatisch.)
 
-- **chromium-browser** – zeigt die App im Vollbild
+- **chromium** – zeigt die App im Vollbild
 - **python3** – der kleine Dienst (`server.py`)
 - **network-manager** (`nmcli`) – WLAN scannen/verbinden im Menü
 - **pulseaudio-utils** (`pactl`) – Audio-Ausgang umschalten + Lautstärke-HUD

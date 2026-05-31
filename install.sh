@@ -15,8 +15,12 @@ echo "▶ zzz.radio Installer  (Ordner: $DIR)"
 # ---- 1) Pakete -------------------------------------------------------------
 echo "▶ Pakete installieren …"
 sudo apt update
+# Chromium heißt je nach OS unterschiedlich: 'chromium' (Debian/trixie) oder
+# 'chromium-browser' (ältere Pi-OS-Versionen)
+if apt-cache show chromium >/dev/null 2>&1; then CHROME_PKG=chromium; else CHROME_PKG=chromium-browser; fi
+echo "   Chromium-Paket: $CHROME_PKG"
 sudo apt install -y \
-  cage chromium-browser python3 git \
+  cage "$CHROME_PKG" python3 git \
   network-manager pipewire-pulse pulseaudio-utils upower \
   fonts-dejavu-core
 
@@ -81,7 +85,8 @@ cat > "$DIR/launch-cage.sh" <<EOF
 pkill -f "server.py 8080" 2>/dev/null || true
 python3 "$DIR/server.py" 8080 &
 sleep 1
-exec cage -- chromium-browser \\
+CHROME="\$(command -v chromium || command -v chromium-browser)"
+exec cage -- "\$CHROME" \\
   --kiosk --app=http://localhost:8080/index.html \\
   --enable-features=UseOzonePlatform --ozone-platform=wayland \\
   --noerrdialogs --disable-infobars --disable-translate --disable-pinch \\
