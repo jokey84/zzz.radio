@@ -24,9 +24,14 @@ if apt-cache show chromium >/dev/null 2>&1; then CHROME_PKG=chromium; else CHROM
 echo "   Chromium-Paket: $CHROME_PKG"
 sudo apt install -y \
   cage "$CHROME_PKG" python3 git \
-  network-manager pipewire-pulse pulseaudio-utils upower \
+  network-manager upower \
+  pipewire pipewire-pulse wireplumber libspa-0.2-bluetooth pulseaudio-utils \
   fonts-dejavu-core fonts-noto-color-emoji
 fc-cache -f >/dev/null 2>&1 || true   # Emoji-Schrift sofort verfügbar machen
+
+# Audio-Dienste (inkl. Bluetooth-A2DP) für den Benutzer starten
+systemctl --user enable --now pipewire pipewire-pulse wireplumber 2>/dev/null || true
+sudo loginctl enable-linger "$USER_NAME" 2>/dev/null || true
 
 # ---- 2) Display: Waveshare 7.9" 400x1280 + TOUCH ---------------------------
 # ROTATE: 0 = Hochformat (Standard). 90/180/270, falls anders montiert.
