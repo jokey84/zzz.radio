@@ -503,6 +503,7 @@ def update_apply():
 
 # ---- Bildschirm-Helligkeit (echte Hardware, sonst Fallback im Frontend) -----
 BRI_PCT = [20, 35, 50, 68, 84, 100]   # 6 Stufen → Prozent
+_BRI_NO_DDC = False                   # gemerkt: Panel kann kein DDC/CI
 
 def set_brightness(level):
     try:
@@ -528,15 +529,18 @@ def set_brightness(level):
                 continue
     except Exception:
         pass
-    # 2) DDC/CI (HDMI-Monitore mit Helligkeitssteuerung)
-    if sh(['which', 'ddcutil']):
+    # 2) DDC/CI (HDMI-Monitore mit Helligkeitssteuerung) – nur 1× probieren,
+    #    sonst bremst die erfolglose Abfrage jeden Tastendruck
+    global _BRI_NO_DDC
+    if not _BRI_NO_DDC and sh(['which', 'ddcutil']):
         try:
             r = subprocess.run(['ddcutil', '--noverify', 'setvcp', '10', str(pct)],
-                               capture_output=True, text=True, timeout=15)
+                               capture_output=True, text=True, timeout=12)
             if r.returncode == 0:
                 return {'ok': True, 'method': 'ddcutil', 'pct': pct}
         except Exception:
             pass
+        _BRI_NO_DDC = True   # Panel kann kein DDC/CI → künftig überspringen
     return {'ok': False, 'method': None, 'pct': pct}
 
 
