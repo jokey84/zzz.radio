@@ -1,0 +1,8 @@
+# OS
+.DS_Store
+Thumbs.db
+# Editor
+.vscode/
+*.swp
+# Vom Installer auf dem Pi erzeugt
+launch-cage.sh

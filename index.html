@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>zzz.radio</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Optionaler Effekt-Hintergrund hinter der ganzen App -->
+  <div class="app-aura aura-layer hidden" id="appAura" aria-hidden="true">
+    <span class="ss-blob b1"></span><span class="ss-blob b2"></span>
+    <span class="ss-blob b3"></span><span class="ss-blob b4"></span>
+  </div>
+
+  <!-- Squeezebox-Statusleiste mit Live-Uhr + Einstellungen -->
+  <div class="statusbar">
+    <div class="sb-left">
+      <span class="wifi-bars" id="wifiBars" title="WLAN-Signal">
+        <i></i><i></i><i></i><i></i>
+      </span>
+      <canvas class="conn-graph" id="connGraph" width="60" height="18" title="Verbindung"></canvas>
+      <span class="bt-batt hidden" id="btBatt" title="Lautsprecher-Akku">
+        <span class="batt-ico"><span class="batt-fill" id="battFill"></span></span>
+        <span class="batt-pct" id="battPct">--</span>
+      </span>
+    </div>
+    <span class="sb-clock" id="clock">--:--</span>
+    <button class="sb-gear" id="settingsBtn" aria-label="Einstellungen">⚙</button>
+  </div>
+
+  <!-- Kopfzeile mit Tabs -->
+  <header class="topbar">
+    <nav class="tabs">
+      <button id="tabSounds" class="tab active">Sounds</button>
+      <button id="tabRadio" class="tab">Radio</button>
+    </nav>
+  </header>
+
+  <!-- ===================== SOUNDS-ANSICHT ===================== -->
+  <section id="soundsView" class="view">
+    <div class="master-row">
+      <span class="master-icon">🔊</span>
+      <input id="master" class="slider master-slider" type="range" min="0" max="100" value="80" />
+    </div>
+    <div id="list" class="list"></div>
+  </section>
+
+  <!-- ===================== RADIO-ANSICHT ===================== -->
+  <section id="radioView" class="view hidden">
+    <div id="nowPlaying" class="now-playing">
+      <div class="np-art" id="npArt">📻</div>
+      <div class="np-info">
+        <div id="npName" class="np-name">Kein Sender</div>
+        <div id="npTrack" class="np-track"></div>
+        <div id="npState" class="np-state">gestoppt</div>
+      </div>
+      <button id="npToggle" class="np-toggle">▶</button>
+    </div>
+    <!-- Cover erscheint smooth unterhalb, sobald verfügbar -->
+    <div id="npCover" class="np-cover">
+      <div class="np-cover-inner">
+        <img id="npCoverImg" class="np-cover-img" alt="Cover" />
+      </div>
+    </div>
+    <div class="master-row">
+      <span class="master-icon">🔊</span>
+      <input id="radioVol" class="slider master-slider" type="range" min="0" max="100" value="80" />
+    </div>
+    <div id="stations" class="list"></div>
+    <button id="searchStation" class="add-btn primary-add">🔍 Sender suchen</button>
+  </section>
+
+  <!-- Globale Fußzeile -->
+  <footer class="bottombar">
+    <button id="timerBtn" class="foot-btn">⏱ Timer</button>
+    <button id="warmBtn" class="foot-btn">🌙 Warm</button>
+    <button id="dimBtn" class="foot-btn">🕐 Uhr</button>
+    <button id="stopAll" class="foot-btn">⏹ Aus</button>
+  </footer>
+
+  <!-- Nachtlicht / Blaulichtfilter (warmer Schleier über allem) -->
+  <div id="warmOverlay" class="warm-overlay"></div>
+
+  <!-- Eigene On-Screen-Tastatur (wird per JS gefüllt) -->
+  <div id="osk" class="osk hidden" aria-hidden="true"></div>
+
+  <!-- Lautstärke-HUD (Apple-Stil), erscheint kurz bei externer Lautstärke-Änderung -->
+  <div id="volHud" class="vol-hud hidden" aria-hidden="true">
+    <span class="vol-ico" id="volIco">🔊</span>
+    <span class="vol-track"><span class="vol-fill" id="volFill"></span></span>
+    <span class="vol-pct" id="volPct">0%</span>
+  </div>
+
+  <!-- Einstellungen (Squeezebox-Stil, Drill-down) -->
+  <div id="settingsView" class="settings hidden">
+    <div class="set-head">
+      <button id="setBack" class="set-back">‹</button>
+      <span id="setTitle" class="set-title">Einstellungen</span>
+    </div>
+    <div id="setBody" class="set-body"></div>
+  </div>
+
+  <!-- Sender-Suche (radio-browser.info) -->
+  <div id="searchView" class="settings hidden">
+    <div class="set-head">
+      <button id="searchBack" class="set-back">‹</button>
+      <span class="set-title">Sender suchen</span>
+    </div>
+    <div class="set-body">
+      <div class="search-row">
+        <input id="searchInput" class="search-input" type="search"
+               placeholder="Name oder Genre…" autocomplete="off" inputmode="none" />
+        <button id="searchGo" class="search-go">🔍</button>
+      </div>
+      <div id="searchChips" class="set-choices"></div>
+      <div id="searchResults"></div>
+    </div>
+  </div>
+
+  <!-- Nachtmodus: Uhr-Screensaver mit Aurora-Hintergrund -->
+  <div id="dimOverlay" class="dim-overlay hidden">
+    <div class="ss-aura aura-layer" id="ssAura" aria-hidden="true">
+      <span class="ss-blob b1"></span>
+      <span class="ss-blob b2"></span>
+      <span class="ss-blob b3"></span>
+      <span class="ss-blob b4"></span>
+    </div>
+    <div class="ss-brand"><span>zzz</span>.radio</div>
+    <div class="ss-clock" id="ssClock">--:--</div>
+    <div class="ss-date" id="ssDate"></div>
+    <div class="ss-hint">zum Aufwecken tippen</div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,765 @@
+/* ==========================================================================
+   Schlaf-Radio — Design inspiriert von der Logitech Squeezebox Touch
+   tiefschwarz & glänzend, glossy Icon-Kacheln, Statusleiste mit Uhr,
+   Now-Playing mit Album-Art, Uhr-Screensaver
+   ========================================================================== */
+:root {
+  --bg-0:      #05070c;
+  --bg-1:      #0b1018;
+  --row:       linear-gradient(180deg, #1b2230 0%, #121722 100%);
+  --row-on:    linear-gradient(180deg, #20406e 0%, #16263f 100%);
+  --accent:    #4ea3ff;
+  --accent-dim:#2f6fb0;
+  --gold:      #f2c14e;
+  --text:      #eef3fb;
+  --text-dim:  #7f8ba1;
+  --hairline:  rgba(255,255,255,.06);
+  --gloss:     linear-gradient(180deg, rgba(255,255,255,.20) 0%, rgba(255,255,255,.03) 48%, rgba(0,0,0,.08) 52%, rgba(0,0,0,.14) 100%);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html {
+  /* Hintergrund nur auf html, damit der optionale App-Aura-Effekt (z-index:-1)
+     durchscheinen kann */
+  background: radial-gradient(120% 60% at 50% 0%, #0e1422 0%, var(--bg-0) 70%);
+}
+html, body {
+  margin: 0; height: 100%;
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  user-select: none; overflow: hidden;
+}
+body {
+  display: flex; flex-direction: column;
+  max-width: 400px; margin: 0 auto;
+  background: transparent;
+}
+
+/* ===== Statusleiste mit Uhr ===== */
+.statusbar {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px 6px 16px;
+  font-size: 12px; letter-spacing: 2px;
+  color: var(--text-dim);
+  background: linear-gradient(180deg, #0a0e16, #05070c);
+  border-bottom: 1px solid var(--hairline);
+}
+.sb-title { font-weight: 700; }
+.sb-clock { flex: 1; text-align: center; font-weight: 700; color: #aeb9cc;
+  letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+.sb-gear {
+  flex: 0 0 auto; width: 30px; height: 30px; border-radius: 9px;
+  border: 1px solid var(--hairline); background: var(--row);
+  color: #aeb9cc; font-size: 16px; line-height: 1; padding: 0;
+}
+
+/* WLAN-Signalbalken + Connectivity-Graph (oben links) */
+.sb-left { flex: 0 0 auto; display: flex; align-items: center; gap: 9px; }
+.wifi-bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 15px; }
+.wifi-bars i { width: 4px; border-radius: 1px; background: #39425a; transition: background .3s; }
+.wifi-bars i:nth-child(1) { height: 5px; }
+.wifi-bars i:nth-child(2) { height: 8px; }
+.wifi-bars i:nth-child(3) { height: 11px; }
+.wifi-bars i:nth-child(4) { height: 14px; }
+.wifi-bars i.on { background: var(--accent); }
+.wifi-bars.weak i.on { background: var(--gold); }
+.wifi-bars.off i { background: #5a2a33; }
+.conn-graph { display: block; width: 60px; height: 18px;
+  border-radius: 3px; background: rgba(255,255,255,.03); }
+
+/* Lautsprecher-Akku (oben links) */
+.bt-batt { display: inline-flex; align-items: center; gap: 5px; font-size: 11px;
+  color: #aeb9cc; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.bt-batt.hidden { display: none; }
+.batt-ico { position: relative; width: 22px; height: 11px; flex: 0 0 auto;
+  border: 1px solid #7f8ba1; border-radius: 3px; padding: 1px; }
+.batt-ico::after { content: ''; position: absolute; right: -3px; top: 3px;
+  width: 2px; height: 5px; background: #7f8ba1; border-radius: 0 1px 1px 0; }
+.batt-fill { display: block; height: 100%; width: 50%; background: #3ad29f; border-radius: 1px;
+  transition: width .4s ease; }
+.bt-batt.low .batt-fill { background: #e0556b; }
+.bt-batt.low { color: #e0889a; }
+
+/* Lautstärke-HUD (Apple-Stil, Glas) */
+.vol-hud {
+  position: fixed; left: 50%; top: 50%; z-index: 80; pointer-events: none;
+  transform: translate(-50%,-50%) scale(.95);
+  display: flex; align-items: center; gap: 14px; padding: 18px 22px; border-radius: 24px;
+  background: rgba(18,22,32,.5);
+  -webkit-backdrop-filter: blur(26px) saturate(1.6); backdrop-filter: blur(26px) saturate(1.6);
+  border: 1px solid rgba(255,255,255,.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 14px 44px rgba(0,0,0,.6);
+  opacity: 0; transition: opacity .2s ease, transform .25s cubic-bezier(.22,.61,.36,1);
+}
+.vol-hud.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+.vol-hud.hidden { display: none; }
+.vol-ico { font-size: 26px; }
+.vol-track { width: 200px; height: 10px; border-radius: 6px; overflow: hidden;
+  background: rgba(255,255,255,.15); box-shadow: inset 0 1px 2px rgba(0,0,0,.5); }
+.vol-fill { display: block; height: 100%; width: 50%;
+  background: linear-gradient(90deg, #7ec0ff, #4ea3ff); transition: width .15s ease; }
+.vol-pct { font-size: 15px; font-weight: 700; color: #eaf2ff; min-width: 44px;
+  text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Bluetooth-Gerätezeilen */
+.bt-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.bt-btn {
+  padding: 9px 11px; border-radius: 9px; font-size: 13px; font-weight: 700;
+  border: 1px solid var(--hairline); background: var(--row); color: var(--text);
+}
+.bt-btn.active { color: var(--gold); border-color: rgba(242,193,78,.4); }
+
+/* ===== Einstellungen (Squeezebox-Drill-down) ===== */
+.settings {
+  position: fixed; inset: 0; z-index: 60;
+  max-width: 400px; margin: 0 auto;
+  background: radial-gradient(120% 50% at 50% 0%, #0e1422 0%, var(--bg-0) 70%);
+  display: flex; flex-direction: column;
+}
+.set-head {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; border-bottom: 1px solid var(--hairline);
+  background: linear-gradient(180deg, #0a0e16, #05070c);
+}
+.set-back {
+  width: 42px; height: 42px; flex: 0 0 auto; border-radius: 11px;
+  border: 1px solid var(--hairline); border-top-color: rgba(255,255,255,.1);
+  background: var(--row); color: var(--text); font-size: 24px; line-height: 1;
+}
+.set-title { font-size: 18px; font-weight: 700; letter-spacing: .3px; }
+.set-body { flex: 1 1 auto; overflow-y: auto; padding: 14px; }
+.set-body::-webkit-scrollbar { width: 0; }
+
+.set-section { font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-dim); margin: 6px 4px 8px; }
+.set-section:not(:first-child) { margin-top: 22px; }
+
+/* Drill-down-Eintrag */
+.set-item {
+  display: flex; align-items: center; gap: 13px;
+  background: var(--row); border: 1px solid var(--hairline);
+  border-top-color: rgba(255,255,255,.10);
+  border-radius: 13px; padding: 15px; margin-bottom: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.4);
+  width: 100%; text-align: left; color: var(--text);
+}
+.si-ico {
+  width: 40px; height: 40px; flex: 0 0 auto; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+  background: #2a3142; position: relative; overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 2px 4px rgba(0,0,0,.5);
+}
+.si-ico::after { content:''; position:absolute; inset:0; background: var(--gloss); }
+.si-label { flex: 1; font-size: 15px; font-weight: 600; }
+.si-val { color: var(--text-dim); font-size: 14px; font-variant-numeric: tabular-nums; }
+.si-chev { color: var(--text-dim); font-size: 20px; }
+
+/* Info-Zeile (Label links, Wert rechts) */
+.set-info {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--row); border: 1px solid var(--hairline);
+  border-radius: 12px; padding: 14px 15px; margin-bottom: 8px;
+}
+.set-info .k { color: var(--text-dim); font-size: 14px; letter-spacing: .3px; }
+.set-info .v { font-size: 15px; font-weight: 600; text-align: right;
+  font-variant-numeric: tabular-nums; word-break: break-all; }
+
+/* Auswahl-Chips (z.B. Screensaver-Zeit) */
+.set-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.chip {
+  padding: 11px 15px; border-radius: 11px; font-size: 14px; font-weight: 700;
+  border: 1px solid var(--hairline); background: var(--row); color: var(--text-dim);
+}
+.chip.active { background: linear-gradient(180deg, #7ec0ff, var(--accent) 60%, var(--accent-dim));
+  color: #061018; border-color: rgba(255,255,255,.25); }
+
+/* Aktions-Buttons */
+.set-action {
+  width: 100%; padding: 16px; border-radius: 13px; margin-bottom: 10px;
+  border: 1px solid var(--hairline); background: var(--row); color: var(--text);
+  font-size: 15px; font-weight: 700;
+}
+.set-action.danger { background: linear-gradient(180deg, #3a1d24, #2a1419);
+  border-color: #5a2a33; color: #ff9a9a; }
+.set-note { color: var(--text-dim); font-size: 13px; line-height: 1.5;
+  padding: 4px 4px 14px; }
+
+/* Slide-Animation: ganze Ansicht herein + Ebenen vor/zurück */
+.settings.opening { animation: setViewIn .3s cubic-bezier(.22,.61,.36,1); }
+@keyframes setViewIn { from { transform: translateX(100%); } to { transform: none; } }
+.set-body.anim-fwd  { animation: setFwd  .28s ease; }
+.set-body.anim-back { animation: setBack .28s ease; }
+@keyframes setFwd  { from { transform: translateX(42px);  opacity: .35; } to { transform: none; opacity: 1; } }
+@keyframes setBack { from { transform: translateX(-42px); opacity: .35; } to { transform: none; opacity: 1; } }
+
+/* WLAN-Netzwerke */
+.wifi-mini { display: inline-flex; align-items: flex-end; gap: 2px; height: 16px; flex: 0 0 auto; }
+.wifi-mini i { width: 4px; border-radius: 1px; background: #39425a; }
+.wifi-mini i:nth-child(1) { height: 5px; }
+.wifi-mini i:nth-child(2) { height: 8px; }
+.wifi-mini i:nth-child(3) { height: 11px; }
+.wifi-mini i:nth-child(4) { height: 14px; }
+.wifi-mini i.on { background: var(--accent); }
+.wifi-wrap { margin-bottom: 8px; }
+.wifi-net {
+  display: flex; align-items: center; gap: 12px; padding: 14px 15px;
+  background: var(--row); border: 1px solid var(--hairline); border-radius: 12px;
+}
+.wifi-net.active { border-color: rgba(58,210,159,.45); }
+.wifi-ssid { flex: 1; font-size: 15px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wifi-lock { color: var(--text-dim); font-size: 14px; }
+.wifi-state { color: #3ad29f; font-weight: 700; }
+.wifi-connect { padding: 8px 2px 2px; }
+.wifi-connect.hidden { display: none; }
+.wifi-pw-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.wifi-pw-row .search-input { flex: 1; }
+.wifi-pw-row .set-action { flex: 0 0 auto; width: auto; padding: 14px 18px; margin: 0; }
+
+/* Wecker-Zeitsteller */
+.alarm-grid { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 4px 0 14px; }
+.alarm-col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.alarm-btn {
+  width: 78px; height: 46px; border-radius: 12px;
+  border: 1px solid var(--hairline); border-top-color: rgba(255,255,255,.1);
+  background: var(--row); color: var(--text); font-size: 18px;
+}
+.alarm-val { font-size: 42px; font-weight: 300; color: var(--text);
+  font-variant-numeric: tabular-nums; min-width: 78px; text-align: center; }
+.alarm-colon { font-size: 40px; font-weight: 300; color: var(--text-dim); padding-bottom: 4px; }
+
+/* ===== Sender-Suche ===== */
+.add-btn.primary-add {
+  border-style: solid; border-color: rgba(78,163,255,.5);
+  color: var(--accent); background: rgba(78,163,255,.08);
+}
+.search-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.search-input {
+  flex: 1; min-width: 0; padding: 14px; border-radius: 12px;
+  border: 1px solid var(--hairline); background: #0a0e16; color: var(--text);
+  font-size: 15px; outline: none;
+}
+.search-input:focus { border-color: var(--accent-dim); }
+.search-go {
+  flex: 0 0 auto; width: 54px; border-radius: 12px; border: 1px solid rgba(255,255,255,.2);
+  background: linear-gradient(180deg, #7ec0ff, var(--accent) 60%, var(--accent-dim));
+  color: #061018; font-size: 18px;
+}
+.result-info { flex: 1; min-width: 0; }
+.result .station-name { flex: none; display: block;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.result-meta { display: block; font-size: 12px; color: var(--text-dim); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.station-chevron.add {
+  flex: 0 0 auto; color: var(--accent); font-size: 24px; font-weight: 700;
+  background: rgba(78,163,255,.1); border: 1px solid rgba(78,163,255,.4);
+  border-radius: 10px; min-width: 44px; height: 40px; line-height: 1;
+}
+.station-chevron.add.added { color: #3ad29f;
+  background: rgba(58,210,159,.12); border-color: rgba(58,210,159,.4); }
+.search-hint { color: var(--text-dim); font-size: 13px; line-height: 1.5; padding: 8px 4px; }
+
+/* ===== On-Screen-Tastatur (dunkel & augenschonend) ===== */
+.osk {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 0;
+  width: 100%; max-width: 400px; z-index: 70;
+  background: #06080c;
+  border-top: 1px solid #161b25;
+  padding: 9px 7px calc(9px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 8px;
+  box-shadow: 0 -12px 28px rgba(0,0,0,.6);
+}
+.osk-row { display: flex; gap: 7px; justify-content: center; }
+.osk-key {
+  flex: 0 0 calc((100% - 42px) / 7);          /* 7 große Tasten pro Reihe */
+  height: 64px; min-width: 0;
+  border: 1px solid #1b2230; border-radius: 13px;
+  background: #0f131b; color: #b6a47e;          /* warm gedimmt, augenschonend */
+  font-size: 25px; font-weight: 600; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; touch-action: manipulation;
+}
+.osk-key:active { background: #1c2433; color: #e6cd98; }
+/* Steuerzeile füllt die ganze Breite */
+.osk-ctrl .osk-key { flex: 1 1 0; height: 60px; font-size: 17px; }
+.osk-ctrl .osk-key.space { flex: 3 1 0; font-size: 14px; letter-spacing: 1px; color: #6f6750; }
+.osk-ctrl .osk-key.enter { flex: 2 1 0; font-size: 18px;
+  background: #4a3f29; color: #f0dcb4; border-color: #5a4d31; }
+.osk-ctrl .osk-key.lang  { flex: 1.3 1 0; font-size: 19px;
+  color: #c9a86f; font-weight: 700; letter-spacing: 1px; }
+.osk-ctrl .osk-key.shift.active { color: #e8c98f; border-color: #3a3320; background: #1a1710; }
+
+/* ===== Nachtlicht / Blaulichtfilter (warmer Multiply-Schleier) ===== */
+.warm-overlay {
+  position: fixed; inset: 0; z-index: 90;
+  pointer-events: none;            /* blockiert keine Bedienung */
+  background: #ff6a00;
+  mix-blend-mode: multiply;        /* zieht den Blauanteil raus */
+  opacity: 0;                      /* aus; Intensität setzt JS */
+  transition: opacity .5s ease;
+}
+
+/* ===== Tabs (glossy) ===== */
+.topbar { flex: 0 0 auto; padding: 12px 16px 8px; }
+.tabs { display: flex; gap: 10px; }
+.tab {
+  flex: 1; padding: 13px 0;
+  font-size: 15px; font-weight: 700; letter-spacing: .5px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--row);
+  color: var(--text-dim);
+  position: relative; overflow: hidden;
+}
+.tab::before { content:''; position:absolute; inset:0; background: var(--gloss);
+  opacity:.5; pointer-events:none; }
+.tab.active {
+  color: #061018;
+  background: linear-gradient(180deg, #7ec0ff 0%, var(--accent) 55%, var(--accent-dim) 100%);
+  border-color: rgba(255,255,255,.25);
+  text-shadow: 0 1px 0 rgba(255,255,255,.3);
+}
+
+/* ===== Views & Listen ===== */
+.view { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.hidden { display: none !important; }
+
+.master-row {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 12px;
+  padding: 10px 18px 6px;
+}
+.master-icon { font-size: 20px; filter: drop-shadow(0 1px 1px #000); }
+
+.list { flex: 1 1 auto; overflow-y: auto; padding: 6px 14px 16px;
+  -webkit-overflow-scrolling: touch; }
+.list::-webkit-scrollbar { width: 0; }
+
+/* ===== Sound-Zeile (Squeezebox-Listeneintrag) ===== */
+.card {
+  background: var(--row);
+  border: 1px solid var(--hairline);
+  border-top-color: rgba(255,255,255,.10);
+  border-radius: 14px;
+  padding: 12px 14px 14px;
+  margin-bottom: 11px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.4);
+}
+.card.on {
+  background: var(--row-on);
+  border-color: rgba(78,163,255,.5);
+  box-shadow: 0 0 0 1px rgba(78,163,255,.35), 0 0 22px rgba(78,163,255,.22);
+}
+.card-head { display: flex; align-items: center; gap: 13px; margin-bottom: 11px; }
+
+/* glossy Icon-Kachel wie die Squeezebox-Menü-Icons */
+.card-emoji {
+  width: 46px; height: 46px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; border-radius: 12px;
+  background: #2a3142;
+  position: relative; overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 2px 4px rgba(0,0,0,.5);
+}
+.card-emoji::after { content:''; position:absolute; inset:0; background: var(--gloss);
+  pointer-events:none; }
+.card-name { font-size: 16px; font-weight: 600; flex: 1; }
+.card-dot { width: 12px; height: 12px; border-radius: 50%;
+  background: #38415a; flex: 0 0 auto; box-shadow: inset 0 1px 1px rgba(0,0,0,.6); }
+.card.on .card-dot { background: var(--accent);
+  box-shadow: 0 0 10px var(--accent), inset 0 1px 1px rgba(255,255,255,.4); }
+.card.loading .card-dot { animation: cardLoad 1s ease-in-out infinite; }
+@keyframes cardLoad { 0%,100% { opacity:.3; } 50% { opacity:1; } }
+
+/* ===== Slider ===== */
+.slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 7px; border-radius: 7px; outline: none;
+  background: linear-gradient(180deg, #0a0e16, #1a2233);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.8);
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #cfe5ff, var(--accent) 60%, var(--accent-dim));
+  border: 2px solid #06101c; box-shadow: 0 2px 5px rgba(0,0,0,.6);
+}
+.slider::-moz-range-thumb {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent); border: 2px solid #06101c;
+}
+.master-slider { flex: 1; }
+
+/* ===== Radio: Now-Playing mit Album-Art ===== */
+.now-playing {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 14px;
+  margin: 12px 16px 6px; padding: 14px;
+  background: linear-gradient(180deg, #141b28, #0a0e16);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.5);
+}
+.np-art {
+  width: 72px; height: 72px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center; font-size: 36px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #2a3956 0%, #16202f 100%);
+  position: relative; overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 3px 8px rgba(0,0,0,.6);
+}
+.np-art::after { content:''; position:absolute; inset:0; background: var(--gloss); }
+.np-info { flex: 1; min-width: 0; }
+.np-name { font-size: 17px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.np-track { font-size: 13px; color: #cfe0f5; margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.np-track:empty { display: none; }
+.np-state { font-size: 12px; color: var(--text-dim); margin-top: 3px;
+  letter-spacing: .5px; text-transform: uppercase; }
+.np-toggle {
+  flex: 0 0 auto; width: 58px; height: 58px; border-radius: 50%;
+  border: 2px solid #06101c; font-size: 22px; color: #061018;
+  background: radial-gradient(circle at 35% 28%, #aed6ff, var(--accent) 60%, var(--accent-dim));
+  box-shadow: 0 3px 8px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.5);
+}
+.np-toggle.loading {
+  background: radial-gradient(circle at 35% 28%, #ffe6a0, var(--gold) 60%, #b8902e);
+}
+
+/* Cover unter der Now-Playing-Leiste – smooth ein-/ausklappen (Grid-Trick) */
+.np-cover {
+  display: grid; grid-template-rows: 0fr; opacity: 0;
+  transition: grid-template-rows .45s cubic-bezier(.22,.61,.36,1), opacity .4s ease;
+  margin: 0 16px;
+}
+.np-cover.show { grid-template-rows: 1fr; opacity: 1; }
+.np-cover-inner { overflow: hidden; min-height: 0; }
+.np-cover-img {
+  display: block; width: 62%; max-width: 220px; aspect-ratio: 1 / 1;
+  object-fit: cover; margin: 12px auto 0; border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.16);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 8px 22px rgba(0,0,0,.55);
+  transform: scale(.94); transition: transform .45s cubic-bezier(.22,.61,.36,1);
+}
+.np-cover.show .np-cover-img { transform: scale(1); }
+
+/* ===== Radio: Sender-Zeile ===== */
+.station {
+  display: flex; align-items: center; gap: 13px;
+  background: var(--row);
+  border: 1px solid var(--hairline); border-top-color: rgba(255,255,255,.10);
+  border-radius: 14px; padding: 15px; margin-bottom: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.4);
+}
+.station.playing { background: var(--row-on); border-color: rgba(78,163,255,.5);
+  box-shadow: 0 0 0 1px rgba(78,163,255,.35), 0 0 18px rgba(78,163,255,.2); }
+.station-ico {
+  width: 40px; height: 40px; flex: 0 0 auto; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+  background: #2a3142; position: relative; overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 2px 4px rgba(0,0,0,.5);
+}
+.station-ico::after { content:''; position:absolute; inset:0; background: var(--gloss); }
+.station-name { flex: 1; font-size: 15px; font-weight: 600; }
+.station-chevron { color: var(--text-dim); font-size: 20px; }
+.station-del {
+  width: 34px; height: 34px; border-radius: 9px; border: none;
+  background: #2a1d24; color: #ff8a8a; font-size: 16px;
+}
+
+/* Wischen-nach-links zum Löschen (rote Mülltonne dahinter) */
+.station-wrap { position: relative; margin-bottom: 10px; }
+.station-delete-bg {
+  position: absolute; inset: 0; border-radius: 14px;
+  background: linear-gradient(90deg, #6e1b1b 0%, #c0392b 100%);
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 26px; font-size: 24px; color: #fff;
+}
+.station-wrap > .station {
+  position: relative; margin-bottom: 0;
+  transition: transform .22s ease;
+  touch-action: pan-y;            /* vertikales Scrollen bleibt, horizontal = Wischen */
+}
+
+.add-btn {
+  flex: 0 0 auto; margin: 0 16px 14px; padding: 15px;
+  border: 1px dashed #36405a; border-radius: 14px;
+  background: rgba(255,255,255,.02); color: var(--text-dim);
+  font-size: 15px; font-weight: 600; letter-spacing: .5px;
+}
+
+/* ===== Fußzeile (glossy Buttons) ===== */
+.bottombar {
+  flex: 0 0 auto; display: flex; gap: 7px;
+  padding: 9px 10px calc(9px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, #0a0e16, #05070c);
+  border-top: 1px solid var(--hairline);
+}
+.foot-btn {
+  flex: 1; padding: 14px 0; border: 1px solid var(--hairline);
+  border-top-color: rgba(255,255,255,.10); border-radius: 12px;
+  background: var(--row); color: var(--text);
+  font-size: 13px; font-weight: 700; letter-spacing: .2px;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.foot-btn.active {
+  color: #1a1405;
+  background: linear-gradient(180deg, #ffd97a, var(--gold) 60%, #b8902e);
+  border-color: rgba(255,255,255,.25);
+}
+
+/* ===== Nachtmodus: Uhr-Screensaver ===== */
+.dim-overlay {
+  position: fixed; inset: 0; z-index: 50; overflow: hidden;
+  background: radial-gradient(120% 80% at 50% 35%, #0a0f1a 0%, #000 75%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+
+/* ----- Effekt-Hintergründe (Screensaver + optional ganze App) -----
+   Tempo über --mo (1 = Normal). .fx-static friert die Bewegung ein. */
+.aura-layer { filter: blur(58px); }
+.ss-aura  { position: absolute; inset: 0; z-index: 0; }
+.app-aura { position: fixed; top: 0; bottom: 0; left: 50%; width: 100%;
+  max-width: 400px; transform: translateX(-50%); z-index: -1;
+  pointer-events: none; opacity: .32; }
+
+.aura-layer .ss-blob { position: absolute; border-radius: 50%;
+  mix-blend-mode: screen; will-change: transform, opacity; }
+.aura-layer.fx-none .ss-blob { display: none; }
+.aura-layer.fx-static .ss-blob,
+.aura-layer.fx-static::before,
+.aura-layer.fx-static::after { animation: none !important; }
+
+/* Effekt: Aurora */
+.aura-layer.fx-aurora .ss-blob.b1 { width: 70%; height: 45%; left: -12%; top: 6%;
+  background: radial-gradient(circle, #2f63e8 0%, rgba(47,99,232,0) 70%);
+  animation: aura1 calc(var(--mo,1) * 27s) ease-in-out infinite alternate; }
+.aura-layer.fx-aurora .ss-blob.b2 { width: 65%; height: 42%; right: -14%; top: 22%;
+  background: radial-gradient(circle, #15a6c2 0%, rgba(21,166,194,0) 70%);
+  animation: aura2 calc(var(--mo,1) * 34s) ease-in-out infinite alternate; }
+.aura-layer.fx-aurora .ss-blob.b3 { width: 75%; height: 48%; left: -8%; bottom: 4%;
+  background: radial-gradient(circle, #7b46d6 0%, rgba(123,70,214,0) 70%);
+  animation: aura3 calc(var(--mo,1) * 31s) ease-in-out infinite alternate; }
+.aura-layer.fx-aurora .ss-blob.b4 { width: 55%; height: 38%; right: -10%; bottom: 14%;
+  background: radial-gradient(circle, #a64fc0 0%, rgba(166,79,192,0) 70%);
+  animation: aura4 calc(var(--mo,1) * 38s) ease-in-out infinite alternate; }
+
+/* Effekt: Nebel */
+.aura-layer.fx-nebula .ss-blob.b1 { width: 88%; height: 56%; left: -22%; top: -2%;
+  background: radial-gradient(circle, #1f3a8f 0%, rgba(31,58,143,0) 70%);
+  animation: aura1 calc(var(--mo,1) * 46s) ease-in-out infinite alternate; }
+.aura-layer.fx-nebula .ss-blob.b2 { width: 82%; height: 52%; right: -24%; top: 16%;
+  background: radial-gradient(circle, #2a7d8c 0%, rgba(42,125,140,0) 70%);
+  animation: aura2 calc(var(--mo,1) * 54s) ease-in-out infinite alternate; }
+.aura-layer.fx-nebula .ss-blob.b3 { width: 92%; height: 60%; left: -18%; bottom: -4%;
+  background: radial-gradient(circle, #5b2a9c 0%, rgba(91,42,156,0) 70%);
+  animation: aura3 calc(var(--mo,1) * 50s) ease-in-out infinite alternate; }
+.aura-layer.fx-nebula .ss-blob.b4 { width: 72%; height: 48%; right: -14%; bottom: 8%;
+  background: radial-gradient(circle, #7a2a72 0%, rgba(122,42,114,0) 70%);
+  animation: aura4 calc(var(--mo,1) * 60s) ease-in-out infinite alternate; }
+
+/* Effekt: Lava (warm, langsam morphend) */
+.aura-layer.fx-lava .ss-blob.b1 { width: 80%; height: 52%; left: -16%; top: 0%;
+  background: radial-gradient(circle, #e0531f 0%, rgba(224,83,31,0) 70%);
+  animation: aura1 calc(var(--mo,1) * 30s) ease-in-out infinite alternate; }
+.aura-layer.fx-lava .ss-blob.b2 { width: 70%; height: 46%; right: -16%; top: 24%;
+  background: radial-gradient(circle, #d12d6b 0%, rgba(209,45,107,0) 70%);
+  animation: aura2 calc(var(--mo,1) * 38s) ease-in-out infinite alternate; }
+.aura-layer.fx-lava .ss-blob.b3 { width: 86%; height: 54%; left: -10%; bottom: -2%;
+  background: radial-gradient(circle, #e08a1f 0%, rgba(224,138,31,0) 70%);
+  animation: aura3 calc(var(--mo,1) * 34s) ease-in-out infinite alternate; }
+.aura-layer.fx-lava .ss-blob.b4 { width: 64%; height: 44%; right: -12%; bottom: 12%;
+  background: radial-gradient(circle, #8a2ea0 0%, rgba(138,46,160,0) 70%);
+  animation: aura4 calc(var(--mo,1) * 42s) ease-in-out infinite alternate; }
+
+/* Effekt: Plasma (fließender Farbverlauf) */
+.aura-layer.fx-plasma { filter: blur(44px) saturate(1.4); }
+.aura-layer.fx-plasma .ss-blob { display: none; }
+.aura-layer.fx-plasma::before {
+  content: ''; position: absolute; inset: -30%;
+  background:
+    radial-gradient(circle at 22% 28%, #3a6df0, transparent 45%),
+    radial-gradient(circle at 78% 22%, #19b3c9, transparent 45%),
+    radial-gradient(circle at 62% 78%, #7a4ddb, transparent 45%),
+    radial-gradient(circle at 30% 72%, #c95ea8, transparent 45%);
+  animation: plasmaMove calc(var(--mo,1) * 24s) ease-in-out infinite alternate,
+             plasmaHue  calc(var(--mo,1) * 40s) linear infinite;
+}
+
+/* Effekt: Bokeh (weiche Lichtpunkte) */
+.aura-layer.fx-bokeh { filter: blur(3px); }
+.aura-layer.fx-bokeh .ss-blob { display: none; }
+.aura-layer.fx-bokeh::before, .aura-layer.fx-bokeh::after {
+  content: ''; position: absolute; inset: -25%;
+  background-image:
+    radial-gradient(10px 10px at 40px 60px,   rgba(120,170,255,.5),  transparent 60%),
+    radial-gradient(7px 7px   at 150px 120px, rgba(170,130,255,.45), transparent 60%),
+    radial-gradient(12px 12px at 230px 200px, rgba(120,200,230,.4),  transparent 60%),
+    radial-gradient(8px 8px   at 90px 250px,  rgba(200,140,210,.4),  transparent 60%);
+  background-size: 270px 290px; background-repeat: repeat;
+  animation: bokehDrift calc(var(--mo,1) * 90s) linear infinite,
+             twinkle    calc(var(--mo,1) * 7s) ease-in-out infinite alternate;
+}
+.aura-layer.fx-bokeh::after { opacity: .55;
+  animation-duration: calc(var(--mo,1) * 130s), calc(var(--mo,1) * 9s); }
+
+/* Effekt: Atem (ruhiges Pulsieren) */
+.aura-layer.fx-atem .ss-blob { display: none; }
+.aura-layer.fx-atem::before {
+  content: ''; position: absolute; left: 50%; top: 45%; width: 85%; height: 58%;
+  transform: translate(-50%,-50%);
+  background: radial-gradient(circle, rgba(78,140,230,.5) 0%, transparent 65%);
+  border-radius: 50%;
+  animation: breathe calc(var(--mo,1) * 9s) ease-in-out infinite;
+}
+
+/* Effekt: Sterne (kein Blur) */
+.aura-layer.fx-stars { filter: none; }
+.aura-layer.fx-stars .ss-blob { display: none; }
+.aura-layer.fx-stars::before {
+  content: ''; position: absolute; inset: -20%;
+  background-image:
+    radial-gradient(1.5px 1.5px at 30px 40px,  #ffffff, transparent),
+    radial-gradient(1px 1px     at 120px 90px,  #bcd4ff, transparent),
+    radial-gradient(1.5px 1.5px at 200px 160px, #ffffff, transparent),
+    radial-gradient(1px 1px     at 80px 220px,  #d9e6ff, transparent),
+    radial-gradient(1.5px 1.5px at 260px 60px,  #ffffff, transparent),
+    radial-gradient(1px 1px     at 180px 280px, #bcd4ff, transparent);
+  background-size: 300px 320px; background-repeat: repeat;
+  animation: starDrift calc(var(--mo,1) * 120s) linear infinite,
+             twinkle   calc(var(--mo,1) * 5s) ease-in-out infinite alternate;
+}
+
+@keyframes aura1 { from { transform: translate(0,0) scale(1);      opacity: .5; }
+                   to   { transform: translate(28%,22%) scale(1.3); opacity: .8; } }
+@keyframes aura2 { from { transform: translate(0,0) scale(1.1);    opacity: .45; }
+                   to   { transform: translate(-26%,18%) scale(1);  opacity: .75; } }
+@keyframes aura3 { from { transform: translate(0,0) scale(1);      opacity: .5; }
+                   to   { transform: translate(22%,-20%) scale(1.25); opacity: .7; } }
+@keyframes aura4 { from { transform: translate(0,0) scale(1.05);   opacity: .4; }
+                   to   { transform: translate(-20%,-16%) scale(1.2); opacity: .7; } }
+@keyframes plasmaMove { from { transform: translate(0,0) scale(1); } to { transform: translate(8%,6%) scale(1.25); } }
+@keyframes plasmaHue  { to { filter: hue-rotate(360deg); } }
+@keyframes bokehDrift { from { transform: translateY(0); } to { transform: translateY(-290px); } }
+@keyframes breathe { 0%,100% { transform: translate(-50%,-50%) scale(.82); opacity: .35; }
+                     50%      { transform: translate(-50%,-50%) scale(1.12); opacity: .8; } }
+@keyframes starDrift { from { transform: translateY(0); } to { transform: translateY(-320px); } }
+@keyframes twinkle  { from { opacity: .5; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .ss-blob, .aura-layer::before, .aura-layer::after { animation: none !important; }
+}
+
+.ss-brand {
+  position: absolute; top: 42px; left: 0; right: 0; z-index: 1; text-align: center;
+  font-size: 15px; font-weight: 600; letter-spacing: 4px; color: #56627a;
+}
+.ss-brand span { color: #7ea8e0; }
+.ss-clock {
+  position: relative; z-index: 1;
+  font-size: 76px; font-weight: 200; letter-spacing: 2px;
+  color: #eaf2ff; font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 28px rgba(120,170,255,.5), 0 0 60px rgba(80,120,255,.25);
+}
+.ss-date { position: relative; z-index: 1; margin-top: 10px; font-size: 16px;
+  color: #8493b5; letter-spacing: 3px; text-transform: uppercase; }
+.ss-hint { position: absolute; z-index: 1; bottom: 40px; font-size: 12px;
+  color: #56607d; letter-spacing: 2px; }
+
+/* ===== Sender-Logos (Bild in den Icon-Kacheln / Album-Art) ===== */
+.ico-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.station-ico .ico-img { border-radius: 10px; }
+.card-emoji .ico-img { border-radius: 12px; }
+.np-art .ico-img { border-radius: 12px; position: relative; z-index: 0; }
+
+/* ===== Laufschrift (Marquee) für Sendername & Titel ===== */
+.np-name, .np-track { overflow: hidden; }
+.mq-inner { display: inline-block; white-space: nowrap; will-change: transform; }
+@keyframes np-marquee {
+  0%, 12%   { transform: translateX(0); }
+  88%, 100% { transform: translateX(var(--shift, 0)); }
+}
+.mq-inner.scroll { animation: np-marquee 11s ease-in-out infinite alternate; }
+
+/* ==========================================================================
+   APPLE-STYLE GLASS BUTTONS ("Liquid Glass")
+   Durchscheinende Flächen + Lichtkante oben + feine Kante + weicher Schatten.
+   Live-Blur (backdrop-filter) nur auf wenige, dauerhafte Buttons (Pi-Tempo).
+   ========================================================================== */
+
+/* gemeinsamer Glas-Look (ohne Einzel-Blur) – auch für viele Listen-Buttons ok */
+.tab, .foot-btn, .add-btn, .chip, .set-item, .set-action, .sb-gear, .set-back,
+.bt-btn, .station-del, .station-chevron.add, .search-go, .np-toggle, .osk-key {
+  background: linear-gradient(180deg, rgba(255,255,255,.14) 0%,
+              rgba(255,255,255,.06) 50%, rgba(255,255,255,.025) 100%);
+  border: 1px solid rgba(255,255,255,.16);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.38),
+              inset 0 -1px 1px rgba(0,0,0,.25),
+              0 4px 16px rgba(0,0,0,.35);
+  color: var(--text);
+}
+.tab:active, .foot-btn:active, .add-btn:active, .chip:active, .set-item:active,
+.set-action:active, .sb-gear:active, .set-back:active, .bt-btn:active,
+.search-go:active, .np-toggle:active, .osk-key:active {
+  background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.08));
+}
+
+/* Live-Frost-Blur nur für die wenigen, dauerhaften Bedien-Buttons */
+.tab, .foot-btn, .add-btn, .chip, .sb-gear, .set-back, .search-go, .np-toggle {
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(16px) saturate(160%);
+}
+
+/* getöntes Glas für aktive / Akzent-Zustände */
+.tab.active {
+  color: #06101c; border-color: rgba(255,255,255,.45);
+  background: linear-gradient(180deg, rgba(150,200,255,.7), rgba(78,163,255,.42));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.65), 0 4px 16px rgba(40,110,200,.4);
+}
+.foot-btn.active {
+  color: #1a1405; border-color: rgba(255,255,255,.45);
+  background: linear-gradient(180deg, rgba(255,224,150,.72), rgba(242,193,78,.44));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 4px 16px rgba(150,110,30,.35);
+}
+.chip.active {
+  color: #06101c; border-color: rgba(255,255,255,.45);
+  background: linear-gradient(180deg, rgba(150,200,255,.7), rgba(78,163,255,.4));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 3px 12px rgba(40,110,200,.35);
+}
+.np-toggle {
+  color: #06101c; border: 1px solid rgba(255,255,255,.5);
+  background: linear-gradient(180deg, rgba(190,224,255,.75), rgba(78,163,255,.5));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 4px 14px rgba(0,0,0,.5);
+}
+.search-go {
+  color: #06101c; border-color: rgba(255,255,255,.5);
+  background: linear-gradient(180deg, rgba(150,200,255,.7), rgba(78,163,255,.45));
+}
+.add-btn.primary-add {
+  color: #9fd0ff;
+  background: linear-gradient(180deg, rgba(78,163,255,.18), rgba(78,163,255,.06));
+  border-color: rgba(126,192,255,.5);
+}
+.station-chevron.add { color: #9fd0ff; }
+.station-chevron.add.added {
+  color: #8df0c4; border-color: rgba(58,210,159,.5);
+  background: linear-gradient(180deg, rgba(58,210,159,.2), rgba(58,210,159,.06));
+}
+.station-del { color: #ff9a9a; border-color: rgba(255,120,120,.3);
+  background: linear-gradient(180deg, rgba(255,90,90,.18), rgba(255,90,90,.05)); }
+
+/* Tastatur: Panel bekommt den Frost, die Tasten den Glas-Look (warm gedimmt) */
+.osk {
+  background: rgba(8,11,17,.55);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  backdrop-filter: blur(26px) saturate(150%);
+}
+.osk-key { color: #c4b48e; }                       /* warm, augenschonend */
+.osk-ctrl .osk-key.enter {
+  color: #f4e3bd; border-color: rgba(240,210,150,.4);
+  background: linear-gradient(180deg, rgba(240,210,150,.32), rgba(120,95,45,.4));
+}
+.osk-ctrl .osk-key.lang { color: #e6c486; }
+.osk-ctrl .osk-key.shift.active {
+  color: #f0d49a; border-color: rgba(240,210,150,.4);
+  background: linear-gradient(180deg, rgba(240,210,150,.28), rgba(255,255,255,.06));
+}
