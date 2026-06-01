@@ -32,8 +32,8 @@
   <!-- Kopfzeile mit Tabs -->
   <header class="topbar">
     <nav class="tabs">
-      <button id="tabSounds" class="tab active">Sounds</button>
-      <button id="tabRadio" class="tab">Radio</button>
+      <button id="tabSounds" class="tab active" data-i18n="tab.sounds">Sounds</button>
+      <button id="tabRadio" class="tab" data-i18n="tab.radio">Radio</button>
     </nav>
   </header>
 
@@ -45,9 +45,9 @@
     </div>
     <div id="list" class="list"></div>
     <div class="sound-actions">
-      <button id="soundReset" class="foot-btn">↺ Reset</button>
-      <button id="soundSave"  class="foot-btn">💾 Speichern</button>
-      <button id="soundLoad"  class="foot-btn">📂 Presets</button>
+      <button id="soundReset" class="foot-btn" data-i18n="foot.reset">↺ Reset</button>
+      <button id="soundSave"  class="foot-btn" data-i18n="foot.save">💾 Speichern</button>
+      <button id="soundLoad"  class="foot-btn" data-i18n="foot.presets">📂 Presets</button>
     </div>
   </section>
 
@@ -73,16 +73,16 @@
       <input id="radioVol" class="slider master-slider" type="range" min="0" max="100" value="80" />
     </div>
     <div id="stations" class="list"></div>
-    <button id="searchStation" class="add-btn primary-add">🔍 Sender suchen</button>
+    <button id="searchStation" class="add-btn primary-add" data-i18n="radio.search">🔍 Sender suchen</button>
   </section>
 
   <!-- Globale Fußzeile -->
   <footer class="bottombar">
-    <button id="timerBtn" class="foot-btn">⏱ Timer</button>
-    <button id="warmBtn" class="foot-btn">🌙 Warm</button>
-    <button id="briBtn" class="foot-btn">🔆 Licht</button>
-    <button id="dimBtn" class="foot-btn">🕐 Uhr</button>
-    <button id="stopAll" class="foot-btn">⏹ Aus</button>
+    <button id="timerBtn" class="foot-btn" data-i18n="bar.timer">⏱ Timer</button>
+    <button id="warmBtn" class="foot-btn" data-i18n="bar.warm">🌙 Warm</button>
+    <button id="briBtn" class="foot-btn" data-i18n="bar.light">🔆 Licht</button>
+    <button id="dimBtn" class="foot-btn" data-i18n="bar.clock">🕐 Uhr</button>
+    <button id="stopAll" class="foot-btn" data-i18n="bar.off">⏹ Aus</button>
   </footer>
 
   <!-- Nachtlicht / Blaulichtfilter (warmer Schleier über allem) -->

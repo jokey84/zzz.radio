@@ -10,6 +10,7 @@
  * ----------------------------------------------------------------------- */
 let ctx = null;                 // wird beim ersten Tippen erstellt (Autoplay-Policy)
 let masterGain = null;          // Summen-Lautstärke der Sounds
+let eqLow = null, eqMid = null, eqHigh = null;   // 3-Band-Equalizer
 const FADE = 0.9;               // Ein-/Ausblendzeit pro Sound in Sekunden
 
 function ensureCtx() {
@@ -17,7 +18,20 @@ function ensureCtx() {
   ctx = new (window.AudioContext || window.webkitAudioContext)();
   masterGain = ctx.createGain();
   masterGain.gain.value = effectiveMaster();
-  masterGain.connect(ctx.destination);
+  // Equalizer-Kette: masterGain -> Bass -> Mitten -> Höhen -> Ausgang
+  eqLow = ctx.createBiquadFilter();  eqLow.type = 'lowshelf';   eqLow.frequency.value = 250;
+  eqMid = ctx.createBiquadFilter();  eqMid.type = 'peaking';    eqMid.frequency.value = 1000; eqMid.Q.value = 0.9;
+  eqHigh = ctx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 4000;
+  masterGain.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ctx.destination);
+  applyEq();
+}
+
+/* 3-Band-Equalizer anwenden (Werte in dB, -12..+12) */
+function applyEq() {
+  if (!eqLow) return;
+  eqLow.gain.value  = readNum('eqLow', 0);
+  eqMid.gain.value  = readNum('eqMid', 0);
+  eqHigh.gain.value = readNum('eqHigh', 0);
 }
 
 /* ----------------------------------------------------------------------- *
@@ -326,7 +340,14 @@ function marqueeText(container, text) {
 function setNpName(name)  { marqueeText(npName, name); }
 function setNpTrack(text) { if (text) marqueeText(npTrack, text); else npTrack.innerHTML = ''; }
 
+/* Favoriten nach oben sortieren (stabil), Wiedergabe-Index nachführen */
+function sortStations() {
+  stations.sort((a, b) => (b.fav ? 1 : 0) - (a.fav ? 1 : 0));
+  currentStation = currentStream ? stations.findIndex(s => s.url === currentStream.url) : -1;
+}
+
 function renderStations() {
+  sortStations();
   stationsEl.innerHTML = '';
   closeOpenRow = null;
   stations.forEach((st, i) => {
@@ -335,8 +356,15 @@ function renderStations() {
     const row = el('div', 'station' + (i === currentStation ? ' playing' : ''),
       `<span class="station-ico"></span>
        <span class="station-name">${escapeHtml(st.name)}</span>
+       <button class="station-fav${st.fav ? ' on' : ''}">${st.fav ? '★' : '☆'}</button>
        <span class="station-chevron">${i === currentStation ? '▶' : '›'}</span>`);
     row.querySelector('.station-ico').appendChild(stationIcon(st));
+    const star = row.querySelector('.station-fav');
+    star.addEventListener('pointerdown', e => e.stopPropagation());
+    star.addEventListener('click', e => {
+      e.stopPropagation();
+      st.fav = !st.fav; saveStations(); renderStations();
+    });
     wrap.appendChild(delbg);
     wrap.appendChild(row);
     stationsEl.appendChild(wrap);
@@ -1184,6 +1212,41 @@ function stopAll() {
  * ----------------------------------------------------------------------- */
 function save(key, val)      { localStorage.setItem(key, JSON.stringify(val)); }
 function save0(key, val)     { localStorage.setItem(key, val); }   // roher String (ohne JSON)
+
+/* ----------------------------------------------------------------------- *
+ *  Mehrsprachigkeit (i18n) – Kernbedienung DE/EN
+ * ----------------------------------------------------------------------- */
+const I18N = {
+  de: {
+    'tab.sounds': 'Sounds', 'tab.radio': 'Radio',
+    'foot.reset': '↺ Reset', 'foot.save': '💾 Speichern', 'foot.presets': '📂 Presets',
+    'radio.search': '🔍 Sender suchen',
+    'bar.timer': '⏱ Timer', 'bar.warm': '🌙 Warm', 'bar.light': '🔆 Licht', 'bar.clock': '🕐 Uhr', 'bar.off': '⏹ Aus',
+    'set.title': 'Einstellungen', 'set.device': 'Gerät', 'set.general': 'Allgemein',
+    'set.network': 'Netzwerk', 'set.bluetooth': 'Bluetooth', 'set.audio': 'Audio-Ausgang',
+    'set.equalizer': 'Equalizer', 'set.display': 'Anzeige', 'set.alarm': 'Wecker',
+    'set.datetime': 'Datum & Zeit', 'set.update': 'Update', 'set.system': 'System',
+    'set.about': 'Über', 'set.language': 'Sprache'
+  },
+  en: {
+    'tab.sounds': 'Sounds', 'tab.radio': 'Radio',
+    'foot.reset': '↺ Reset', 'foot.save': '💾 Save', 'foot.presets': '📂 Presets',
+    'radio.search': '🔍 Find station',
+    'bar.timer': '⏱ Timer', 'bar.warm': '🌙 Warm', 'bar.light': '🔆 Light', 'bar.clock': '🕐 Clock', 'bar.off': '⏹ Off',
+    'set.title': 'Settings', 'set.device': 'Device', 'set.general': 'General',
+    'set.network': 'Network', 'set.bluetooth': 'Bluetooth', 'set.audio': 'Audio output',
+    'set.equalizer': 'Equalizer', 'set.display': 'Display', 'set.alarm': 'Alarm',
+    'set.datetime': 'Date & time', 'set.update': 'Update', 'set.system': 'System',
+    'set.about': 'About', 'set.language': 'Language'
+  }
+};
+function curLang() { return localStorage.getItem('lang') || 'de'; }
+function t(key) { const L = I18N[curLang()] || I18N.de; return L[key] || I18N.de[key] || key; }
+function applyLang() {
+  const L = curLang();
+  document.documentElement.setAttribute('lang', L);
+  document.querySelectorAll('[data-i18n]').forEach(e => { e.textContent = t(e.getAttribute('data-i18n')); });
+}
 function readNum(key, def)   { const v = localStorage.getItem(key); return v === null ? def : JSON.parse(v); }
 function saveStations()      { localStorage.setItem('stations_v2', JSON.stringify(stations)); }
 function saveActive()        { save('active', sounds.filter(s=>s.playing).map(s=>s.def.id)); }
@@ -1193,6 +1256,7 @@ function escapeHtml(s)       { const d=document.createElement('div'); d.textCont
    Browser blockieren Audio bis zur ersten Nutzer-Geste → optisch markieren,
    tatsächlich starten beim ersten Tippen irgendwo auf den Screen. */
 window.addEventListener('load', () => {
+  applyLang();
   masterSlider.value = Math.round(readNum('master', 0.8) * 100);
   const rv = document.getElementById('radioVol'); if (rv) rv.value = Math.round(readNum('radioVol', 0.8) * 100);
   refreshAllFills();
@@ -1402,19 +1466,36 @@ function wifiNetRow(net, onConnected) {
 
 const PANELS = {
   root: {
-    title: 'Einstellungen',
+    get title() { return t('set.title'); },
     render(b) {
-      b.appendChild(setSection('Gerät'));
-      navItem(b, '📶', 'Netzwerk',      () => navigate(PANELS.network));
-      navItem(b, '🔵', 'Bluetooth',     () => navigate(PANELS.bluetooth));
-      navItem(b, '🔊', 'Audio-Ausgang', () => navigate(PANELS.audio));
-      navItem(b, '🖥️', 'Anzeige',       () => navigate(PANELS.display));
-      b.appendChild(setSection('Allgemein'));
-      navItem(b, '⏰', 'Wecker',        () => navigate(PANELS.alarm));
-      navItem(b, '🕐', 'Datum & Zeit',  () => navigate(PANELS.datetime));
-      navItem(b, '⬇️', 'Update',        () => navigate(PANELS.update));
-      navItem(b, '⚙️', 'System',        () => navigate(PANELS.system));
-      navItem(b, 'ℹ️', 'Über',           () => navigate(PANELS.about));
+      b.appendChild(setSection(t('set.device')));
+      navItem(b, '📶', t('set.network'),   () => navigate(PANELS.network));
+      navItem(b, '🔵', t('set.bluetooth'), () => navigate(PANELS.bluetooth));
+      navItem(b, '🔊', t('set.audio'),     () => navigate(PANELS.audio));
+      navItem(b, '🎚️', t('set.equalizer'), () => navigate(PANELS.equalizer));
+      navItem(b, '🖥️', t('set.display'),   () => navigate(PANELS.display));
+      b.appendChild(setSection(t('set.general')));
+      navItem(b, '⏰', t('set.alarm'),     () => navigate(PANELS.alarm));
+      navItem(b, '🕐', t('set.datetime'),  () => navigate(PANELS.datetime));
+      navItem(b, '🌐', t('set.language'),  () => navigate(PANELS.language));
+      navItem(b, '⬇️', t('set.update'),    () => navigate(PANELS.update));
+      navItem(b, '⚙️', t('set.system'),    () => navigate(PANELS.system));
+      navItem(b, 'ℹ️', t('set.about'),      () => navigate(PANELS.about));
+    }
+  },
+
+  language: {
+    get title() { return t('set.language'); },
+    render(b) {
+      b.appendChild(setSection(t('set.language')));
+      const wrap = el('div', 'set-choices');
+      [{ v: 'de', l: 'Deutsch' }, { v: 'en', l: 'English' }].forEach(o => {
+        const c = el('button', 'chip' + (curLang() === o.v ? ' active' : ''), o.l);
+        c.addEventListener('click', () => { save0('lang', o.v); applyLang(); refresh(); });
+        wrap.appendChild(c);
+      });
+      b.appendChild(wrap);
+      b.appendChild(el('div', 'set-note', 'Übersetzt die Hauptbedienung (Tabs, Leisten, Menü). Weitere Bereiche folgen.'));
     }
   },
 
@@ -1527,6 +1608,29 @@ const PANELS = {
       }).catch(() => { list.innerHTML = ''; list.appendChild(el('div', 'search-hint', 'Kein lokaler Dienst erreichbar.')); });
       load();
 
+      b.appendChild(setSection('System-Lautstärke (Linux-Gesamtton)'));
+      const sysRow = el('div', 'sysvol-row');
+      const sysIco = el('span', 'sysvol-ico', '🔉');
+      const sysSld = el('input', 'slider'); sysSld.type = 'range'; sysSld.min = 0; sysSld.max = 100; sysSld.value = 50;
+      const sysPct = el('span', 'sysvol-pct', '–');
+      sysRow.append(sysIco, sysSld, sysPct); b.appendChild(sysRow);
+      const sysHint = el('div', 'set-note', 'Steuert die Gesamtlautstärke des Standard-Ausgangs (pactl).');
+      b.appendChild(sysHint);
+      fetch('/api/audio/volume').then(r => r.json()).then(d => {
+        if (d && typeof d.volume === 'number') {
+          sysSld.value = d.volume; sysPct.textContent = d.volume + ' %'; fillSlider(sysSld);
+        } else { sysSld.disabled = true; sysPct.textContent = ''; sysHint.textContent = 'Nur auf dem Pi verfügbar.'; }
+      }).catch(() => { sysSld.disabled = true; sysHint.textContent = 'Kein lokaler Dienst erreichbar.'; });
+      let sysT = null;
+      sysSld.addEventListener('input', () => {
+        sysPct.textContent = sysSld.value + ' %';
+        clearTimeout(sysT);
+        sysT = setTimeout(() => fetch('/api/audio/setvolume', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pct: +sysSld.value })
+        }).catch(() => {}), 120);
+      });
+
       b.appendChild(setSection('Lautstärke-Limit'));
       const lc = el('div', 'set-choices'); b.appendChild(lc);
       const cur = readNum('volLimit', 100);
@@ -1536,6 +1640,37 @@ const PANELS = {
         lc.appendChild(c);
       });
       b.appendChild(el('div', 'set-note', 'Begrenzt die Maximal-Lautstärke (z.B. nachts).'));
+    }
+  },
+
+  equalizer: {
+    title: 'Equalizer',
+    render(b) {
+      b.appendChild(setSection('Klang (gilt für die Sounds)'));
+      const bands = [
+        { key: 'eqLow',  label: 'Bass' },
+        { key: 'eqMid',  label: 'Mitten' },
+        { key: 'eqHigh', label: 'Höhen' }
+      ];
+      bands.forEach(bd => {
+        const row = el('div', 'eq-row');
+        row.appendChild(el('span', 'eq-label', bd.label));
+        const sld = el('input', 'slider eq-slider'); sld.type = 'range';
+        sld.min = -12; sld.max = 12; sld.step = 1; sld.value = readNum(bd.key, 0);
+        const val = el('span', 'eq-val', (sld.value > 0 ? '+' : '') + sld.value + ' dB');
+        // gefüllter Bereich relativ zur Mitte (0 dB)
+        const paintEq = () => {
+          val.textContent = (sld.value > 0 ? '+' : '') + sld.value + ' dB';
+          sld.style.setProperty('--fill', ((+sld.value + 12) / 24 * 100) + '%');
+        };
+        paintEq();
+        sld.addEventListener('input', () => { save0(bd.key, sld.value); applyEq(); paintEq(); });
+        row.append(sld, val); b.appendChild(row);
+      });
+      const reset = el('button', 'set-action', 'Zurücksetzen (flach)');
+      reset.addEventListener('click', () => { ['eqLow','eqMid','eqHigh'].forEach(k => save0(k, 0)); applyEq(); refresh(); });
+      b.appendChild(reset);
+      b.appendChild(el('div', 'set-note', 'Hebt/senkt tiefe, mittlere und hohe Frequenzen der Klang-Mischung.'));
     }
   },
 

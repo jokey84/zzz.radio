@@ -222,6 +222,19 @@ def sink_volume():
     return int(m.group(1)) if m else None
 
 
+def set_sink_volume(pct):
+    """System-/Gesamtlautstärke des Standard-Ausgangs setzen."""
+    if not IS_LINUX:
+        return {'ok': False, 'msg': 'Nur auf dem Pi.'}
+    try:
+        pct = max(0, min(100, int(pct)))
+        r = subprocess.run(['pactl', 'set-sink-volume', '@DEFAULT_SINK@', str(pct) + '%'],
+                           capture_output=True, text=True, timeout=8)
+        return {'ok': r.returncode == 0, 'pct': pct}
+    except Exception as e:
+        return {'ok': False, 'msg': str(e)[:120]}
+
+
 def bt_scan(timeout=12):
     sh(['bluetoothctl', 'power', 'on'])
     sh(['bluetoothctl', '--timeout', str(timeout), 'scan', 'on'], timeout=timeout + 5)
@@ -657,6 +670,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if p.startswith('/api/wifi/connect'):
             b = self._body()
             return self._json(wifi_connect((b.get('ssid') or '').strip(), b.get('password') or ''))
+        if p.startswith('/api/audio/setvolume'):
+            return self._json(set_sink_volume(self._body().get('pct', 50)))
         if p.startswith('/api/audio/default'):
             return self._json(audio_set_default((self._body().get('name') or '').strip()))
         if p.startswith('/api/time'):

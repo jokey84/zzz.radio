@@ -917,3 +917,24 @@ button:active            { transform: scale(.92); }   /* eindrücken */
   color: #f0d49a; border-color: rgba(240,210,150,.4);
   background: linear-gradient(180deg, rgba(240,210,150,.28), rgba(255,255,255,.06));
 }
+
+/* --- Sender-Favoriten (Stern) --- */
+.station-fav {
+  margin-left: auto; width: 44px; height: 44px; flex: 0 0 auto;
+  background: none; border: none; font-size: 22px; line-height: 1;
+  color: #44516a; cursor: pointer; padding: 0;
+}
+.station-fav.on { color: #f0c862; text-shadow: 0 0 8px rgba(240,200,98,.5); }
+.station .station-chevron { margin-left: 6px; }
+
+/* --- System-Lautstärke-Zeile (Audio-Panel) --- */
+.sysvol-row { display: flex; align-items: center; gap: 12px; padding: 8px 2px 4px; }
+.sysvol-ico { font-size: 20px; flex: 0 0 auto; }
+.sysvol-row .slider { flex: 1; }
+.sysvol-pct { flex: 0 0 auto; min-width: 46px; text-align: right; color: #9fb3d0; font-variant-numeric: tabular-nums; }
+
+/* --- Equalizer --- */
+.eq-row { display: flex; align-items: center; gap: 12px; padding: 10px 2px; }
+.eq-label { flex: 0 0 64px; color: #cfe0f5; font-weight: 600; }
+.eq-row .slider { flex: 1; }
+.eq-val { flex: 0 0 auto; min-width: 56px; text-align: right; color: #9fb3d0; font-variant-numeric: tabular-nums; }
