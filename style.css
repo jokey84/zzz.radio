@@ -491,7 +491,10 @@ button:active            { transform: scale(.92); }   /* eindrücken */
 .slider {
   -webkit-appearance: none; appearance: none;
   width: 100%; height: 7px; border-radius: 7px; outline: none;
-  background: linear-gradient(180deg, #0a0e16, #1a2233);
+  /* gefüllter Bereich farbig (var --fill wird per JS gesetzt) */
+  background:
+    linear-gradient(90deg, #7ec0ff, var(--accent)) left / var(--fill, 50%) 100% no-repeat,
+    #131a28;
   box-shadow: inset 0 1px 2px rgba(0,0,0,.8);
 }
 .slider::-webkit-slider-thumb {

@@ -178,6 +178,14 @@ masterSlider.addEventListener('input', () => {
 function effectiveMaster() { return Math.min(readNum('master', 0.8), readNum('volLimit', 100) / 100); }
 function applyVolLimit()   { if (masterGain) masterGain.gain.value = effectiveMaster(); }
 
+/* Lautstärke-Fader: gefüllten Bereich farbig anzeigen */
+function fillSlider(el) {
+  const min = +el.min || 0, max = +el.max || 100;
+  el.style.setProperty('--fill', ((el.value - min) / (max - min) * 100) + '%');
+}
+function refreshAllFills() { document.querySelectorAll('input[type=range]').forEach(fillSlider); }
+document.addEventListener('input', e => { if (e.target && e.target.type === 'range') fillSlider(e.target); });
+
 /* ----------------------------------------------------------------------- *
  * 6) INTERNET-RADIO (TuneIn / Web-Radio via direkter Stream-URL)
  * ----------------------------------------------------------------------- */
@@ -852,6 +860,7 @@ function resetSounds() {
     s.setVolume(0.6);
     const sl = s._card && s._card.querySelector('.slider'); if (sl) sl.value = 60;
   });
+  refreshAllFills();
   saveActive();
 }
 function applyPreset(p) {
@@ -869,6 +878,7 @@ function applyPreset(p) {
     if (s._card) s._card.classList.add('on');
     s.start();
   });
+  refreshAllFills();
   saveActive();
 }
 function showPresetsDialog() {
@@ -1183,6 +1193,9 @@ function escapeHtml(s)       { const d=document.createElement('div'); d.textCont
    Browser blockieren Audio bis zur ersten Nutzer-Geste → optisch markieren,
    tatsächlich starten beim ersten Tippen irgendwo auf den Screen. */
 window.addEventListener('load', () => {
+  masterSlider.value = Math.round(readNum('master', 0.8) * 100);
+  const rv = document.getElementById('radioVol'); if (rv) rv.value = Math.round(readNum('radioVol', 0.8) * 100);
+  refreshAllFills();
   const active = JSON.parse(localStorage.getItem('active') || '[]');
   sounds.forEach(s => { if (active.includes(s.def.id)) s._card.classList.add('on'); });
 
