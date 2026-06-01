@@ -479,32 +479,52 @@ def git_run(args, timeout=30):
         return 1, str(e)
 
 
+def git_heal():
+    """Häufige Stolperfallen entschärfen: 'dubious ownership' → safe.directory."""
+    code, out = git_run(['rev-parse', '--is-inside-work-tree'], timeout=6)
+    if code != 0 and ('dubious ownership' in out or 'safe.directory' in out):
+        git_run(['config', '--global', '--add', 'safe.directory', DIR])
+        code, out = git_run(['rev-parse', '--is-inside-work-tree'], timeout=6)
+    return code, out
+
+
 def update_check():
     """Mit GitHub abgleichen: gibt es eine neuere Version?"""
-    code, _ = git_run(['rev-parse', '--is-inside-work-tree'], timeout=6)
+    code, out = git_heal()
     if code != 0:
         return {'git': False,
-                'msg': 'Kein Git-Repo – Update nur möglich, wenn per git geklont wurde.'}
-    git_run(['fetch', '--quiet'], timeout=30)
+                'msg': 'Kein Git-Repo oder Zugriff verweigert: ' + (out[:200] or 'unbekannt')}
+    fcode, fout = git_run(['fetch', '--quiet'], timeout=30)
+    # Upstream ermitteln, sonst hart auf origin/main ausweichen
+    rc, upstream = git_run(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'])
+    ref = upstream.strip() if rc == 0 and upstream.strip() else 'origin/main'
     _, local  = git_run(['rev-parse', 'HEAD'])
-    _, remote = git_run(['rev-parse', '@{u}'])
-    _, behind = git_run(['rev-list', '--count', 'HEAD..@{u}'])
+    _, remote = git_run(['rev-parse', ref])
+    _, behind = git_run(['rev-list', '--count', 'HEAD..' + ref])
     _, url    = git_run(['config', '--get', 'remote.origin.url'])
     _, lmsg   = git_run(['log', '-1', '--format=%h %s', 'HEAD'])
-    _, rmsg   = git_run(['log', '-1', '--format=%h %s', '@{u}'])
+    _, rmsg   = git_run(['log', '-1', '--format=%h %s', ref])
     bn = int(behind) if behind.strip().isdigit() else 0
-    return {'git': True, 'available': bn > 0, 'behind': bn,
-            'current': local[:7], 'latest': remote[:7],
-            'currentMsg': lmsg, 'latestMsg': rmsg, 'url': url}
+    res = {'git': True, 'available': bn > 0, 'behind': bn,
+           'current': local[:7], 'latest': remote[:7],
+           'currentMsg': lmsg, 'latestMsg': rmsg, 'url': url, 'ref': ref}
+    if fcode != 0:                       # fetch fehlgeschlagen → echten Grund mitschicken
+        res['fetchError'] = (fout[:240] or 'git fetch fehlgeschlagen')
+        res['msg'] = 'Abgleich mit GitHub fehlgeschlagen: ' + res['fetchError']
+    return res
 
 
 def update_apply():
     """Sauber auf den GitHub-Stand setzen und Dienst neu starten."""
-    code, _ = git_run(['rev-parse', '--is-inside-work-tree'], timeout=6)
+    code, out = git_heal()
     if code != 0:
-        return {'ok': False, 'msg': 'Kein Git-Repo.'}
+        return {'ok': False, 'msg': 'Kein Git-Repo / Zugriff verweigert: ' + (out[:200] or '')}
     git_run(['config', 'core.fileMode', 'false'])               # chmod +x nicht als Änderung werten
-    git_run(['fetch', '--prune'], timeout=60)
+    fcode, fout = git_run(['fetch', '--prune'], timeout=60)
+    if fcode != 0:
+        return {'ok': False, 'msg': 'git fetch fehlgeschlagen: ' + (fout[:240] or '') +
+                '\n\nMeist gehören .git-Dateien root (nach „sudo git …"). Auf dem Pi einmalig:\n'
+                'sudo chown -R $USER:$USER ~/zzz.radio'}
     code, out = git_run(['reset', '--hard', '@{u}'], timeout=60)  # hart auf origin/main (keine Merge-Konflikte)
     if code != 0:
         code, out = git_run(['reset', '--hard', 'origin/main'], timeout=60)

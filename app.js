@@ -1899,6 +1899,12 @@ const PANELS = {
         }
         infoRow(ver, 'Installiert', d.current || '—');
         infoRow(ver, 'Auf GitHub',  d.latest || '—');
+        if (d.fetchError) {
+          status.appendChild(el('div', 'search-hint',
+            '⚠️ Abgleich mit GitHub fehlgeschlagen – angezeigter „GitHub"-Stand ist evtl. veraltet.\n\n' +
+            d.fetchError + '\n\nMeist gehören .git-Dateien root (nach „sudo git …"). ' +
+            'Auf dem Pi einmalig im Terminal:\nsudo chown -R $USER:$USER ~/zzz.radio'));
+        }
         if (d.available) {
           status.appendChild(el('div', 'update-badge', `⬆️ Update verfügbar (${d.behind} Commit${d.behind > 1 ? 's' : ''})`));
           if (d.latestMsg) status.appendChild(el('div', 'set-note', 'Neueste Änderung: ' + escapeHtml(d.latestMsg)));
