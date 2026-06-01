@@ -54,6 +54,12 @@ body {
   flex: 0 0 auto; width: 30px; height: 30px; border-radius: 9px;
   border: 1px solid var(--hairline); background: var(--row);
   color: #aeb9cc; font-size: 16px; line-height: 1; padding: 0;
+  position: relative;
+}
+.sb-gear.has-update::after {
+  content: ''; position: absolute; top: -3px; right: -3px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #ff5a5a; border: 1.5px solid #05070c;
 }
 
 /* WLAN-Signalbalken + Connectivity-Graph (oben links) */
@@ -230,6 +236,9 @@ body {
 .alarm-val { font-size: 42px; font-weight: 300; color: var(--text);
   font-variant-numeric: tabular-nums; min-width: 78px; text-align: center; }
 .alarm-colon { font-size: 40px; font-weight: 300; color: var(--text-dim); padding-bottom: 4px; }
+.night-grid { display: flex; align-items: flex-end; justify-content: center; gap: 28px; padding: 4px 0 12px; }
+.night-col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.night-lab { font-size: 12px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
 
 /* Update-Status */
 .update-badge {
@@ -277,7 +286,7 @@ body {
 /* ===== On-Screen-Tastatur (dunkel & augenschonend) ===== */
 .osk {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: 0;
-  width: 100%; max-width: 400px; z-index: 70;
+  width: 100%; max-width: 400px; z-index: 100;
   background: #06080c;
   border-top: 1px solid #161b25;
   padding: 9px 7px calc(9px + env(safe-area-inset-bottom));

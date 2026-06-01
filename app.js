@@ -818,6 +818,29 @@ function uiConfirm(msg, okLabel, danger) {
     { label: okLabel || 'OK', value: true, kind: danger ? 'danger' : 'primary' },
   ]);
 }
+/* Dialog mit Texteingabe (nutzt die Bildschirmtastatur) → liefert Text oder null */
+function uiPrompt(msg, def, okLabel) {
+  return new Promise(resolve => {
+    modalMsg.innerHTML = '';
+    modalMsg.appendChild(el('div', '', msg));
+    const input = el('input', 'search-input osk-input');
+    input.type = 'text'; input.value = def || ''; input.autocomplete = 'off';
+    input.setAttribute('inputmode', 'none');
+    input.style.cssText = 'width:100%; margin-top:12px;';
+    modalMsg.appendChild(input);
+    const done = v => { hideKeyboard(); modal.classList.add('hidden'); resolve(v); };
+    input.addEventListener('focus', () => showKeyboard(input, () => done(input.value)));
+    input.addEventListener('click', () => showKeyboard(input, () => done(input.value)));
+    modalBtns.innerHTML = '';
+    const cancel = el('button', 'modal-btn', 'Abbrechen');
+    cancel.addEventListener('click', () => done(null));
+    const ok = el('button', 'modal-btn primary', okLabel || 'Speichern');
+    ok.addEventListener('click', () => done(input.value));
+    modalBtns.appendChild(cancel); modalBtns.appendChild(ok);
+    modal.classList.remove('hidden');
+    setTimeout(() => input.focus(), 60);
+  });
+}
 
 /* ----- Sound-Presets: Reset / aktuellen Mix speichern / Presets laden ----- */
 let soundPresets = JSON.parse(localStorage.getItem('soundPresets') || '[]');
@@ -877,9 +900,14 @@ document.getElementById('soundReset').addEventListener('click', resetSounds);
 document.getElementById('soundSave').addEventListener('click', () => {
   const active = sounds.filter(s => s.playing).map(s => ({ id: s.def.id, vol: s.volume }));
   if (!active.length) { uiAlert('Kein Sound aktiv.\nErst Sounds einschalten, dann speichern.'); return; }
-  const p = { name: 'Mix ' + (soundPresets.length + 1), active, master: readNum('master', 0.8) };
-  soundPresets.push(p); saveSoundPresets();
-  uiAlert('Gespeichert als „' + p.name + '".');
+  const fallback = 'Mix ' + (soundPresets.length + 1);
+  uiPrompt('Name für das Preset:', fallback).then(name => {
+    if (name == null) return;                          // abgebrochen
+    name = (name || '').trim() || fallback;
+    soundPresets.push({ name, active, master: readNum('master', 0.8) });
+    saveSoundPresets();
+    uiAlert('Gespeichert als „' + name + '".');
+  });
 });
 document.getElementById('soundLoad').addEventListener('click', showPresetsDialog);
 
@@ -1056,11 +1084,15 @@ updateClocks();
 setInterval(updateClocks, 10000);
 
 /* Wecker / Sunrise-Alarm */
-let alarmFired = null;
+let alarmFired = null, alarmRinging = null;
 function checkAlarm() {
-  if (!readNum('alarmOn', 0)) return;
-  const t = localStorage.getItem('alarmTime') || '07:00';
   const now = new Date();
+  const snz = parseInt(localStorage.getItem('alarmSnooze') || '0', 10);   // Schlummern
+  if (snz && Date.now() >= snz) { localStorage.removeItem('alarmSnooze'); triggerAlarm(); return; }
+  if (!readNum('alarmOn', 0)) return;
+  const days = JSON.parse(localStorage.getItem('alarmDays') || '[0,1,2,3,4,5,6]');
+  if (!days.includes(now.getDay())) return;            // heute kein Wecktag
+  const t = localStorage.getItem('alarmTime') || '07:00';
   const cur = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
   const key = now.toDateString() + ' ' + t;
   if (cur === t && alarmFired !== key) { alarmFired = key; triggerAlarm(); }
@@ -1069,20 +1101,53 @@ function triggerAlarm() {
   ensureCtx();
   dimOverlay.classList.add('hidden');                 // Bildschirm wecken
   const sid = localStorage.getItem('alarmSound') || 'birds';
-  if (sid === 'radio') { if (stations.length) playStation(0); }
+  if (sid === 'radio') { if (stations.length) playStation(0); alarmRinging = { kind: 'radio' }; }
   else {
     const s = sounds.find(x => x.def.id === sid);
     if (s) { if (s._card) s._card.classList.add('on'); s.start(); saveActive(); }
+    alarmRinging = { kind: 'sound', id: sid };
   }
   if (masterGain) {                                   // Sunrise: über 3 min sanft lauter
-    const target = effectiveMaster();
-    const now = ctx.currentTime;
-    masterGain.gain.cancelScheduledValues(now);
-    masterGain.gain.setValueAtTime(0.08, now);
-    masterGain.gain.linearRampToValueAtTime(Math.max(0.08, target), now + 180);
+    const t0 = ctx.currentTime;
+    masterGain.gain.cancelScheduledValues(t0);
+    masterGain.gain.setValueAtTime(0.08, t0);
+    masterGain.gain.linearRampToValueAtTime(Math.max(0.08, effectiveMaster()), t0 + 180);
   }
+  showAlarmRinging();
+}
+function stopAlarm() {
+  if (!alarmRinging) return;
+  if (alarmRinging.kind === 'radio') stopRadio();
+  else {
+    const s = sounds.find(x => x.def.id === alarmRinging.id);
+    if (s) { s.stop(); if (s._card) s._card.classList.remove('on'); saveActive(); }
+  }
+  alarmRinging = null;
+}
+function snoozeAlarm() { stopAlarm(); localStorage.setItem('alarmSnooze', String(Date.now() + 9 * 60000)); }
+function showAlarmRinging() {
+  uiDialog('⏰  Wecker', [
+    { label: 'Schlummern (9 min)', value: 'snooze' },
+    { label: 'Wecker aus', value: 'off', kind: 'danger' },
+  ]).then(v => { if (v === 'snooze') snoozeAlarm(); else stopAlarm(); });
 }
 setInterval(checkAlarm, 20000);
+
+/* Nacht-Zeitplan: Nachtlicht an + dimmen im Zeitfenster, sonst hell */
+let nightApplied = null;
+function checkNightSchedule() {
+  if (!readNum('nightSchedOn', 0)) return;
+  const from = readNum('nightFrom', 21), to = readNum('nightTo', 7);
+  const h = new Date().getHours();
+  const inWin = from <= to ? (h >= from && h < to) : (h >= from || h < to);   // über Mitternacht
+  if (inWin && nightApplied !== true) {
+    nightApplied = true; applyWarm(2); applyBrightness(1);
+  } else if (!inWin && nightApplied !== false) {
+    nightApplied = false; applyWarm(0); applyBrightness(5);
+  }
+}
+checkNightSchedule();
+setInterval(checkNightSchedule, 60000);
 
 /* Auto-Screensaver: nach Inaktivität die Uhr einblenden (Squeezebox-Stil).
    Zeit ist in den Einstellungen wählbar (Minuten; 0 = aus). */
@@ -1148,6 +1213,15 @@ settingsBtn.addEventListener('click', () => {
   setStack = [];
   navigate(PANELS.root);
 });
+
+/* Roter Punkt am Zahnrad, wenn ein Update verfügbar ist */
+function checkUpdateBadge() {
+  fetch('/api/update/check').then(r => r.json())
+    .then(d => settingsBtn.classList.toggle('has-update', !!(d && d.available)))
+    .catch(() => {});
+}
+checkUpdateBadge();
+setInterval(checkUpdateBadge, 6 * 3600 * 1000);
 setBack.addEventListener('click', () => {
   setStack.pop();
   if (setStack.length === 0) { settingsView.classList.add('hidden'); return; }
@@ -1482,6 +1556,21 @@ const PANELS = {
         oc.appendChild(c);
       });
 
+      b.appendChild(setSection('Wochentage'));
+      const dayWrap = el('div', 'set-choices'); b.appendChild(dayWrap);
+      const dayDefs = [['Mo',1],['Di',2],['Mi',3],['Do',4],['Fr',5],['Sa',6],['So',0]];
+      const adays = JSON.parse(localStorage.getItem('alarmDays') || '[0,1,2,3,4,5,6]');
+      dayDefs.forEach(([lab, idx]) => {
+        const c = el('button', 'chip' + (adays.includes(idx) ? ' active' : ''), lab);
+        c.addEventListener('click', () => {
+          let d = JSON.parse(localStorage.getItem('alarmDays') || '[0,1,2,3,4,5,6]');
+          d = d.includes(idx) ? d.filter(x => x !== idx) : d.concat(idx);
+          localStorage.setItem('alarmDays', JSON.stringify(d));
+          refresh();
+        });
+        dayWrap.appendChild(c);
+      });
+
       b.appendChild(setSection('Aufwach-Klang'));
       const sc = el('div', 'set-choices'); b.appendChild(sc);
       const asound = localStorage.getItem('alarmSound') || 'birds';
@@ -1603,6 +1692,31 @@ const PANELS = {
         wd.appendChild(c);
       });
       b.appendChild(el('div', 'set-note', 'Sanfte Tropfen-Ringe im Uhr-Screensaver (Idle-Modus).'));
+
+      b.appendChild(setSection('Nacht-Zeitplan'));
+      const nc = el('div', 'set-choices'); b.appendChild(nc);
+      const nOn = readNum('nightSchedOn', 0);
+      [{v:0,l:'Aus'},{v:1,l:'An'}].forEach(o => {
+        const c = el('button', 'chip' + (o.v === nOn ? ' active' : ''), o.l);
+        c.addEventListener('click', () => { save('nightSchedOn', o.v); nightApplied = null; checkNightSchedule(); refresh(); });
+        nc.appendChild(c);
+      });
+      const ng = el('div', 'night-grid'); b.appendChild(ng);
+      const hourCol = (label, key, def) => {
+        const wrap = el('div', 'night-col');
+        wrap.appendChild(el('div', 'night-lab', label));
+        let h = readNum(key, def);
+        const up = el('button', 'alarm-btn', '▲');
+        const val = el('div', 'alarm-val', String(h).padStart(2,'0'));
+        const dn = el('button', 'alarm-btn', '▼');
+        const upd = () => { save(key, h); val.textContent = String(h).padStart(2,'0'); nightApplied = null; checkNightSchedule(); };
+        up.addEventListener('click', () => { h = (h+1) % 24; upd(); });
+        dn.addEventListener('click', () => { h = (h+23) % 24; upd(); });
+        wrap.append(up, val, dn); return wrap;
+      };
+      ng.appendChild(hourCol('Von', 'nightFrom', 21));
+      ng.appendChild(hourCol('Bis', 'nightTo', 7));
+      b.appendChild(el('div', 'set-note', 'Schaltet im Zeitfenster Nachtlicht ein und dimmt; danach automatisch wieder hell.'));
 
       b.appendChild(setSection('Aktion'));
       const now = el('button', 'set-action', '🌑 Bildschirmschoner jetzt starten');
