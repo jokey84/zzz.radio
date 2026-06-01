@@ -110,6 +110,7 @@ exec cage -- "\$CHROME" \\
   --noerrdialogs --disable-infobars \\
   --overscroll-history-navigation=0 \\
   --autoplay-policy=no-user-gesture-required \\
+  --disk-cache-size=1 --disable-application-cache \\
   --check-for-update-interval=31536000
 EOF
 chmod +x "$DIR/launch-cage.sh"

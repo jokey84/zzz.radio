@@ -596,6 +596,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a):
         pass  # ruhig bleiben
 
+    def end_headers(self):
+        # Kiosk-Browser nie alte CSS/JS aus dem Cache anzeigen lassen (Updates sofort sichtbar)
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
+        super().end_headers()
+
     def _json(self, obj, code=200):
         body = json.dumps(obj).encode()
         self.send_response(code)
