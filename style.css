@@ -938,3 +938,59 @@ button:active            { transform: scale(.92); }   /* eindrücken */
 .eq-label { flex: 0 0 64px; color: #cfe0f5; font-weight: 600; }
 .eq-row .slider { flex: 1; }
 .eq-val { flex: 0 0 auto; min-width: 56px; text-align: right; color: #9fb3d0; font-variant-numeric: tabular-nums; }
+
+/* ===================================================================== *
+ *  Mehr Bewegung — GPU-schonend (nur transform/opacity), Pi-tauglich
+ * ===================================================================== */
+@keyframes riseIn   { from { opacity: 0; transform: translateY(11px); } to { opacity: 1; transform: none; } }
+@keyframes viewFade { from { opacity: 0; transform: translateY(7px) scale(.994); } to { opacity: 1; transform: none; } }
+@keyframes dotPulse { 0%,100% { transform: scale(1);    opacity: .85; } 50% { transform: scale(1.55); opacity: 1; } }
+@keyframes playPulse{ 0%,100% { transform: scale(1);    opacity: .8;  } 50% { transform: scale(1.2);  opacity: 1; } }
+@keyframes chipPop  { 0% { transform: scale(.88); } 60% { transform: scale(1.07); } 100% { transform: scale(1); } }
+@keyframes glowPulse{ 0%,100% { box-shadow: 0 0 0 1px rgba(78,163,255,.25), 0 6px 18px rgba(78,163,255,.12); }
+                      50%      { box-shadow: 0 0 0 1px rgba(78,163,255,.55), 0 8px 26px rgba(78,163,255,.30); } }
+
+/* Tab-Wechsel: Inhalt sanft einblenden */
+.view:not(.hidden) { animation: viewFade .32s cubic-bezier(.2,.7,.3,1) both; }
+
+/* Sound-Karten: gestaffelt „eindealen" */
+.card { animation: riseIn .36s cubic-bezier(.2,.7,.3,1) both; }
+.card:nth-child(2){animation-delay:.03s}.card:nth-child(3){animation-delay:.06s}
+.card:nth-child(4){animation-delay:.09s}.card:nth-child(5){animation-delay:.12s}
+.card:nth-child(6){animation-delay:.15s}.card:nth-child(7){animation-delay:.18s}
+.card:nth-child(8){animation-delay:.21s}.card:nth-child(9){animation-delay:.24s}
+.card:nth-child(10){animation-delay:.27s}.card:nth-child(n+11){animation-delay:.30s}
+
+/* aktive Karte: sanft „atmender" Glanz + pulsierender Punkt */
+.card.on { animation: cardPop .35s cubic-bezier(.2,.7,.3,1.5), glowPulse 3.4s ease-in-out infinite .35s; }
+.card.on .card-dot { animation: dotPulse 1.9s ease-in-out infinite; }
+
+/* gespeicherte Sender & Suchtreffer: gestaffeltes Auftauchen */
+.station-wrap, #searchResults .station { animation: riseIn .3s ease both; }
+.station-wrap:nth-child(2),#searchResults .station:nth-child(2){animation-delay:.035s}
+.station-wrap:nth-child(3),#searchResults .station:nth-child(3){animation-delay:.07s}
+.station-wrap:nth-child(4),#searchResults .station:nth-child(4){animation-delay:.105s}
+.station-wrap:nth-child(5),#searchResults .station:nth-child(5){animation-delay:.14s}
+.station-wrap:nth-child(6),#searchResults .station:nth-child(6){animation-delay:.175s}
+.station-wrap:nth-child(n+7),#searchResults .station:nth-child(n+7){animation-delay:.21s}
+
+/* Einstellungs-Einträge: gestaffelt herein */
+.set-item { animation: riseIn .3s ease both; }
+.set-item:nth-child(2){animation-delay:.03s}.set-item:nth-child(3){animation-delay:.06s}
+.set-item:nth-child(4){animation-delay:.09s}.set-item:nth-child(5){animation-delay:.12s}
+.set-item:nth-child(6){animation-delay:.15s}.set-item:nth-child(n+7){animation-delay:.18s}
+
+/* laufender Sender: ▶ pulsiert; aktiver Chip: kleiner Pop */
+.station.playing .station-chevron { animation: playPulse 1.6s ease-in-out infinite; display: inline-block; }
+.chip.active { animation: chipPop .26s ease; }
+
+/* Zahnrad dreht beim Tippen */
+#settingsBtn { transition: transform .35s cubic-bezier(.2,.7,.3,1.5); }
+#settingsBtn:active { transform: rotate(85deg) scale(.9); }
+
+/* Barrierefreiheit: bei „weniger Bewegung" alles ruhig stellen */
+@media (prefers-reduced-motion: reduce) {
+  .view:not(.hidden), .card, .card.on, .card.on .card-dot, .station-wrap,
+  #searchResults .station, .set-item, .station.playing .station-chevron, .chip.active
+  { animation: none !important; }
+}
