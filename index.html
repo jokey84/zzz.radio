@@ -158,6 +158,39 @@
     <div class="ss-hint">zum Aufwecken tippen</div>
   </div>
 
+  <!-- Persistenz: Einstellungen/Favoriten serverseitig sichern (überlebt Neustart
+       zuverlässig, anders als Chromiums verzögert geschriebener localStorage) -->
+  <script>
+  (function () {
+    // 1) gespeicherten Stand vom Server holen UND in localStorage schreiben – synchron,
+    //    damit app.js gleich die richtigen Werte liest
+    try {
+      var x = new XMLHttpRequest();
+      x.open('GET', '/api/store', false);
+      x.send(null);
+      if (x.status >= 200 && x.status < 300) {
+        var d = JSON.parse(x.responseText || '{}');
+        if (d && d.data) {
+          for (var k in d.data) { try { localStorage.setItem(k, d.data[k]); } catch (e) {} }
+        }
+      }
+    } catch (e) {}
+    // 2) ab jetzt jede Änderung (debounced) auf den Server spiegeln
+    var T = null;
+    function snap() { var o = {}; for (var i = 0; i < localStorage.length; i++) { var key = localStorage.key(i); o[key] = localStorage.getItem(key); } return o; }
+    function sync() {
+      clearTimeout(T);
+      T = setTimeout(function () {
+        fetch('/api/store', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: snap() }) }).catch(function () {});
+      }, 600);
+    }
+    var _s = localStorage.setItem.bind(localStorage);    localStorage.setItem    = function (k, v) { _s(k, v); sync(); };
+    var _r = localStorage.removeItem.bind(localStorage); localStorage.removeItem = function (k) { _r(k); sync(); };
+    var _c = localStorage.clear.bind(localStorage);      localStorage.clear      = function () { _c(); sync(); };
+    // beim Verlassen/Verstecken nochmal sofort sichern (z.B. vor Reboot)
+    window.addEventListener('pagehide', function () { try { navigator.sendBeacon && navigator.sendBeacon('/api/store', JSON.stringify({ data: snap() })); } catch (e) {} });
+  })();
+  </script>
   <script src="app.js"></script>
 </body>
 </html>

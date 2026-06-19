@@ -621,6 +621,31 @@ def system_info():
     }
 
 
+# ---- Persistenter Einstellungs-Speicher (überlebt Neustart zuverlässig) ------
+STORE_PATH = os.path.join(DIR, 'store.json')
+
+def store_read():
+    try:
+        with open(STORE_PATH, encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def store_write(data):
+    if not isinstance(data, dict):
+        return False
+    try:
+        tmp = STORE_PATH + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())          # sofort auf die Platte schreiben
+        os.replace(tmp, STORE_PATH)       # atomar ersetzen
+        return True
+    except Exception:
+        return False
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k):
         super().__init__(*a, directory=DIR, **k)
@@ -690,6 +715,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if p.startswith('/api/img'):
             q = parse_qs(urlparse(p).query)
             return self.serve_image((q.get('url') or [''])[0])
+        if p.startswith('/api/store'):
+            return self._json({'data': store_read()})
         if p.startswith('/api/bt/active'):
             return self._json(bt_active())
         if p.startswith('/api/bt/battery'):
@@ -731,6 +758,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if p.startswith('/api/wifi/connect'):
             b = self._body()
             return self._json(wifi_connect((b.get('ssid') or '').strip(), b.get('password') or ''))
+        if p.startswith('/api/store'):
+            return self._json({'ok': store_write(self._body().get('data'))})
         if p.startswith('/api/audio/setvolume'):
             return self._json(set_sink_volume(self._body().get('pct', 50)))
         if p.startswith('/api/audio/default'):
