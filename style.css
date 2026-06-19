@@ -996,7 +996,11 @@ button:active            { transform: scale(.92); }   /* eindrücken */
 }
 
 /* Kiosk/Touch: Mauszeiger ausblenden (Bedienung nur per Touch) */
-html, body, * { cursor: none !important; }
+/* Manche Chromium/Wayland-Builds ignorieren `cursor: none`, akzeptieren aber ein
+   transparentes Cursor-Bild. Daher 1x1-transparentes PNG + Fallback none. */
+html, body, *, *::before, *::after {
+  cursor: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC") 0 0, none !important;
+}
 
 /* Bluetooth-Status-Icon in der Statusleiste */
 .bt-icon { font-size: 12px; line-height: 1; flex: 0 0 auto;
