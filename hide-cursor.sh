@@ -1,46 +1,60 @@
 #!/usr/bin/env bash
-# Blendet den Mauszeiger im cage/Wayland-Kiosk zuverlässig aus:
-#   1) transparentes XCursor-Theme (kein Paket nötig)
-#   2) Software-Cursor erzwingen (Pi-GPU zeichnet sonst einen Hardware-Cursor,
-#      den das Theme nicht überdeckt)
-# Danach: sudo reboot
+# Mauszeiger im cage/Wayland-Kiosk ausblenden.
+# Trick: ECHTE Cursor-Dateien aus dem vorhandenen Adwaita-Theme nehmen (garantiert
+# gültiges Format, das cage sicher lädt) und nur ihre Pixel auf transparent setzen.
+# Zusätzlich Adwaita selbst ersetzen, falls cage XCURSOR_THEME ignoriert.
 set -e
 
-echo "▶ 1/3  transparentes Cursor-Theme bauen …"
-python3 - <<'PY'
-import struct, os
-W = H = 24                                   # 24x24; wlroots verwirft 1x1 ODER komplett leere Cursor
-head   = b'Xcur' + struct.pack('<III', 16, 0x00010000, 1)
-toc    = struct.pack('<III', 0xfffd0002, W, 28)
-pix = [0] * (W * H)                           # alle Pixel transparent …
-pix[0] = 0x01000000                           # … bis auf 1 Pixel mit Alpha 1 (unsichtbar, aber „nicht leer")
-pixels = struct.pack('<%dI' % (W * H), *pix)
-chunk  = struct.pack('<IIIIIIIII', 36, 0xfffd0002, W, 1, W, H, 0, 0, 0) + pixels
-data   = head + toc + chunk
-d = os.path.expanduser('~/.icons/zzz-blank/cursors')
-os.makedirs(d, exist_ok=True)
-names = ['left_ptr','default','arrow','top_left_arrow','hand','hand1','hand2','pointer',
-         'pointing_hand','xterm','text','ibeam','watch','wait','progress','crosshair','cross',
-         'fleur','move','grab','grabbing','question_arrow','sb_h_double_arrow','sb_v_double_arrow',
-         'bottom_right_corner','bottom_left_corner','top_right_corner','top_left_corner',
-         'left_side','right_side','top_side','bottom_side','X_cursor','dotbox']
-for n in names:
-    p = os.path.join(d, n)
-    try: os.remove(p)
-    except OSError: pass
-    open(p, 'wb').write(data)
-open(os.path.expanduser('~/.icons/zzz-blank/index.theme'), 'w').write('[Icon Theme]\nName=zzz-blank\nInherits=core\n')
-print('   Theme: %d transparente Cursor in %s' % (len(names), d))
+SRC=/usr/share/icons/Adwaita/cursors
+if [ ! -d "$SRC" ]; then
+  echo "FEHLER: $SRC fehlt – ohne Adwaita-Theme geht dieser Weg nicht."; exit 1
+fi
+
+echo "▶ 1/3  transparente Cursor aus Adwaita erzeugen …"
+python3 - "$SRC" <<'PY'
+import struct, os, sys
+src = sys.argv[1]
+dst = os.path.expanduser('~/.icons/zzz-blank/cursors')
+os.makedirs(dst, exist_ok=True)
+
+def transparentize(data):
+    b = bytearray(data)
+    if b[:4] != b'Xcur':
+        return None
+    ntoc = struct.unpack('<I', b[12:16])[0]
+    off = 16; tocs = []
+    for _ in range(ntoc):
+        t, sub, pos = struct.unpack('<III', b[off:off+12]); off += 12
+        tocs.append((t, pos))
+    for t, pos in tocs:
+        if t == 0xfffd0002 and pos + 36 <= len(b):          # Bild-Chunk
+            w, h = struct.unpack('<II', b[pos+16:pos+24])
+            ps, pl = pos + 36, w * h * 4
+            if ps + pl <= len(b):
+                b[ps:ps+pl] = b'\x00' * pl                  # alle Pixel komplett durchsichtig
+    return bytes(b)
+
+done = 0
+for n in os.listdir(src):
+    try:
+        data = open(os.path.realpath(os.path.join(src, n)), 'rb').read()
+        out = transparentize(data)
+        if out:
+            open(os.path.join(dst, n), 'wb').write(out); done += 1
+    except Exception:
+        pass
+open(os.path.expanduser('~/.icons/zzz-blank/index.theme'), 'w').write(
+    '[Icon Theme]\nName=zzz-blank\nInherits=Adwaita\n')
+print('   %d transparente Cursor erzeugt' % done)
 PY
 
-echo "▶ 2/3  Launcher patchen …"
-L=$(find "$HOME" -name launch-cage.sh 2>/dev/null | head -1)
-if [ -z "$L" ]; then echo "   FEHLER: launch-cage.sh nicht gefunden"; exit 1; fi
-echo "   Launcher: $L"
-sed -i '/XCURSOR_THEME/d; /XCURSOR_SIZE/d; /XCURSOR_PATH/d; /WLR_NO_HARDWARE_CURSORS/d' "$L"
-sed -i "/exec cage/i export XCURSOR_PATH=$HOME/.icons:/usr/share/icons\nexport XCURSOR_THEME=zzz-blank\nexport XCURSOR_SIZE=24\nexport WLR_NO_HARDWARE_CURSORS=1" "$L"
+echo "▶ 2/3  Adwaita sichern und durch die transparenten ersetzen …"
+if [ ! -d "${SRC}.orig" ]; then sudo cp -a "$SRC" "${SRC}.orig"; fi
+sudo cp -af "$HOME/.icons/zzz-blank/cursors/." "$SRC/"
 
-echo "▶ 3/3  Kontrolle:"
+echo "▶ 3/3  Launcher-Variablen:"
+L=$(find "$HOME" -name launch-cage.sh 2>/dev/null | head -1)
 grep -nE 'XCURSOR|WLR_NO|exec cage' "$L" | sed 's/^/   /'
 echo
-echo "✅ Fertig. Jetzt:  sudo reboot"
+echo "✅ Fertig. Jetzt: sudo reboot"
+echo "   (Rückgängig: sudo cp -af ${SRC}.orig/. ${SRC}/ && sudo reboot)"
