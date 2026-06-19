@@ -2,15 +2,31 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="google" content="notranslate" />
+  <meta name="theme-color" content="#070b12" />
+  <meta name="format-detection" content="telephone=no" />
+  <!-- iOS: als Vollbild-Web-App (Zum Home-Bildschirm) -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="zzz.radio" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Crect width='180' height='180' rx='40' fill='%23070b12'/%3E%3Ctext x='50%25' y='54%25' font-size='110' text-anchor='middle' dominant-baseline='central'%3E%F0%9F%8C%99%3C/text%3E%3C/svg%3E" />
   <title>zzz.radio — Fernbedienung</title>
   <style>
     :root { --accent:#4ea3ff; --bg:#070b12; --card:#131a28; --line:rgba(255,255,255,.08); --dim:#8da0bd; }
-    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-    body { margin:0; background:radial-gradient(120% 60% at 50% 0%, #0e1422, var(--bg) 70%);
-      color:#eef3fb; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-      max-width:520px; margin:0 auto; padding:14px 14px 40px; min-height:100vh; }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent;
+      -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+    html { -webkit-text-size-adjust:100%; background:var(--bg);
+      min-height:100vh; min-height:-webkit-fill-available; }
+    body { margin:0 auto; max-width:520px;
+      background:radial-gradient(120% 60% at 50% 0%, #0e1422, var(--bg) 70%);
+      color:#eef3fb; font-family:-apple-system,system-ui,"Segoe UI",Roboto,sans-serif;
+      min-height:100vh; min-height:100dvh; min-height:-webkit-fill-available;
+      overscroll-behavior-y:contain; touch-action:manipulation;
+      /* Safe-Area: Inhalt nicht unter Notch/Dynamic Island/Home-Indikator */
+      padding:calc(14px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right))
+              calc(40px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left)); }
     h1 { font-size:17px; letter-spacing:1px; margin:6px 2px 14px; font-weight:700; }
     h1 small { color:var(--dim); font-weight:400; letter-spacing:0; }
     .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px;
@@ -19,7 +35,8 @@
     .np-title { color:var(--dim); font-size:14px; margin-top:4px; min-height:18px; }
     .row { display:flex; gap:10px; align-items:center; }
     .row.controls { justify-content:center; margin-top:14px; }
-    button { font:inherit; color:#eef3fb; background:linear-gradient(180deg,#1b2230,#121722);
+    button { -webkit-appearance:none; appearance:none; font:inherit; color:#eef3fb;
+      background:linear-gradient(180deg,#1b2230,#121722); touch-action:manipulation;
       border:1px solid var(--line); border-top-color:rgba(255,255,255,.12); border-radius:13px;
       padding:14px; cursor:pointer; transition:transform .12s; }
     button:active { transform:scale(.93); }
