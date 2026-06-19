@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="google" content="notranslate" />
+  <title>zzz.radio — Fernbedienung</title>
+  <style>
+    :root { --accent:#4ea3ff; --bg:#070b12; --card:#131a28; --line:rgba(255,255,255,.08); --dim:#8da0bd; }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body { margin:0; background:radial-gradient(120% 60% at 50% 0%, #0e1422, var(--bg) 70%);
+      color:#eef3fb; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+      max-width:520px; margin:0 auto; padding:14px 14px 40px; min-height:100vh; }
+    h1 { font-size:17px; letter-spacing:1px; margin:6px 2px 14px; font-weight:700; }
+    h1 small { color:var(--dim); font-weight:400; letter-spacing:0; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px;
+      box-shadow:0 2px 8px rgba(0,0,0,.4); }
+    .np-name { font-size:20px; font-weight:700; }
+    .np-title { color:var(--dim); font-size:14px; margin-top:4px; min-height:18px; }
+    .row { display:flex; gap:10px; align-items:center; }
+    .row.controls { justify-content:center; margin-top:14px; }
+    button { font:inherit; color:#eef3fb; background:linear-gradient(180deg,#1b2230,#121722);
+      border:1px solid var(--line); border-top-color:rgba(255,255,255,.12); border-radius:13px;
+      padding:14px; cursor:pointer; transition:transform .12s; }
+    button:active { transform:scale(.93); }
+    .ctrl { width:60px; height:60px; font-size:22px; border-radius:50%; padding:0; }
+    .ctrl.big { width:74px; height:74px; font-size:28px;
+      background:radial-gradient(circle at 35% 30%,#cfe5ff,var(--accent) 60%,#2f6fb0); border:none; color:#06101c; }
+    .lab { font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--dim); margin:2px 2px 8px; }
+    input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:8px; border-radius:8px; outline:none;
+      background:linear-gradient(90deg,#7ec0ff,var(--accent)) left/var(--fill,50%) 100% no-repeat,#0e1420; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:28px; height:28px; border-radius:50%;
+      background:radial-gradient(circle at 35% 30%,#cfe5ff,var(--accent) 60%,#2f6fb0); border:2px solid #06101c; }
+    .vol-row { display:flex; align-items:center; gap:12px; }
+    .vol-row .ico { font-size:20px; } .vol-row .pct { min-width:44px; text-align:right; color:var(--dim); font-variant-numeric:tabular-nums; }
+    .st { display:flex; align-items:center; gap:10px; padding:13px 12px; border-radius:12px; border:1px solid var(--line);
+      background:#0f1622; margin-bottom:8px; }
+    .st.on { background:linear-gradient(180deg,#20406e,#16263f); border-color:rgba(78,163,255,.4); }
+    .st .nm { flex:1; font-weight:600; }
+    .st .fav { color:#f0c862; }
+    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+    .snd { display:flex; flex-direction:column; align-items:center; gap:5px; padding:13px 6px; font-size:12px; line-height:1.2; text-align:center; }
+    .snd .em { font-size:24px; } .snd.on { background:linear-gradient(180deg,#20406e,#16263f); border-color:rgba(78,163,255,.4); }
+    .muted { color:var(--dim); text-align:center; padding:10px; }
+    .full { width:100%; }
+  </style>
+</head>
+<body>
+  <h1>🌙 zzz.radio <small>Fernbedienung</small></h1>
+
+  <div class="card" id="npCard">
+    <div class="np-name" id="npName">—</div>
+    <div class="np-title" id="npTitle"></div>
+    <div class="row controls">
+      <button class="ctrl" onclick="cmd('radio.prev')" title="Vorheriger">⏮</button>
+      <button class="ctrl big" id="playBtn" onclick="cmd('radio.toggle')">▶</button>
+      <button class="ctrl" onclick="cmd('radio.next')" title="Nächster">⏭</button>
+      <button class="ctrl" onclick="cmd('radio.stop')" title="Stop">⏹</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="lab">Radio-Lautstärke</div>
+    <div class="vol-row"><span class="ico">📻</span>
+      <input type="range" min="0" max="100" id="radioVol" oninput="paint(this);" onchange="cmd('radio.vol',{value:+this.value})">
+      <span class="pct" id="radioVolPct">–</span></div>
+    <div class="lab" style="margin-top:16px">Sound-Lautstärke (Master)</div>
+    <div class="vol-row"><span class="ico">🔊</span>
+      <input type="range" min="0" max="100" id="masterVol" oninput="paint(this);" onchange="cmd('master.vol',{value:+this.value})">
+      <span class="pct" id="masterVolPct">–</span></div>
+  </div>
+
+  <div class="card">
+    <div class="lab">Sender</div>
+    <div id="stations"><div class="muted">lädt …</div></div>
+  </div>
+
+  <div class="card">
+    <div class="lab">Einschlaf-Sounds</div>
+    <div class="grid" id="sounds"></div>
+    <button class="full" style="margin-top:10px" onclick="cmd('sounds.off')">⏹ Alle Sounds aus</button>
+  </div>
+
+  <div class="muted" id="conn">verbinde …</div>
+
+  <script>
+    function paint(el){ el.style.setProperty('--fill', el.value + '%'); }
+    function cmd(c, args){
+      fetch('/api/remote/cmd', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ cmd:c, args:args||{} }) }).then(poll).catch(function(){});
+    }
+    var dragging = null;
+    document.querySelectorAll('input[type=range]').forEach(function(s){
+      s.addEventListener('pointerdown', function(){ dragging = s.id; });
+      s.addEventListener('pointerup',   function(){ setTimeout(function(){ dragging = null; }, 600); });
+    });
+
+    function render(st){
+      document.getElementById('conn').textContent = 'verbunden ✓';
+      var r = st.radio || {};
+      document.getElementById('npName').textContent = r.station || 'Kein Sender';
+      document.getElementById('npTitle').textContent = r.title || '';
+      document.getElementById('playBtn').textContent = r.playing ? '⏸' : '▶';
+      if (dragging !== 'radioVol') { var rv=document.getElementById('radioVol'); rv.value=r.vol||0; paint(rv); document.getElementById('radioVolPct').textContent=(r.vol||0)+' %'; }
+      if (dragging !== 'masterVol') { var mv=document.getElementById('masterVol'); mv.value=st.master||0; paint(mv); document.getElementById('masterVolPct').textContent=(st.master||0)+' %'; }
+
+      var sc = document.getElementById('stations');
+      if (!st.stations || !st.stations.length) { sc.innerHTML = '<div class="muted">Keine Sender gespeichert.</div>'; }
+      else { sc.innerHTML=''; st.stations.forEach(function(s){
+        var d=document.createElement('div'); d.className='st'+((r.index===s.i&&r.playing)?' on':'');
+        d.innerHTML='<span>📻</span><span class="nm"></span>'+(s.fav?'<span class="fav">★</span>':'');
+        d.querySelector('.nm').textContent=s.name;
+        d.onclick=function(){ cmd('radio.play',{index:s.i}); };
+        sc.appendChild(d);
+      }); }
+
+      var gc = document.getElementById('sounds'); gc.innerHTML='';
+      (st.sounds||[]).forEach(function(s){
+        var b=document.createElement('button'); b.className='snd'+(s.on?' on':'');
+        b.innerHTML='<span class="em">'+(s.emoji||'🎵')+'</span><span></span>';
+        b.querySelector('span:last-child').textContent=s.name;
+        b.onclick=function(){ cmd('sound.toggle',{id:s.id}); };
+        gc.appendChild(b);
+      });
+    }
+    function poll(){
+      fetch('/api/remote/state').then(function(r){return r.json();}).then(function(d){
+        if (d && d.state && Object.keys(d.state).length) render(d.state);
+        else document.getElementById('conn').textContent='Kiosk meldet sich noch nicht … (läuft die App auf dem Pi?)';
+      }).catch(function(){ document.getElementById('conn').textContent='keine Verbindung zum Pi'; });
+    }
+    setInterval(poll, 1500); poll();
+  </script>
+</body>
+</html>

@@ -1531,6 +1531,11 @@ const PANELS = {
         infoRow(info, 'IP-Adresse',  d.ip || '—');
         infoRow(info, 'Signal',      d.signal != null && d.signal !== '' ? d.signal + ' %' : '—');
         infoRow(info, 'Hostname',    d.hostname || '—');
+        if (d.ip) {
+          info.appendChild(el('div', 'set-note',
+            '📱 <b>Fernbedienung</b> im selben WLAN öffnen:<br>' +
+            `<b style="color:#cfe5ff">http://${escapeHtml(d.ip)}:8080/remote.html</b>`));
+        }
       }).catch(() => { info.innerHTML = '';
         info.appendChild(el('div', 'search-hint', 'Kein lokaler Dienst (server.py) erreichbar.')); });
       loadInfo();
@@ -2027,3 +2032,66 @@ const PANELS = {
     }
   }
 };
+
+/* ----------------------------------------------------------------------- *
+ *  Web-Fernbedienung: Befehle vom Server ausführen + Zustand melden
+ *  (die Wiedergabe passiert hier im Kiosk; das Handy schickt nur Befehle)
+ * ----------------------------------------------------------------------- */
+function toggleSound(id, on) {
+  const s = sounds.find(x => x.def.id === id);
+  if (!s) return;
+  const want = (on === undefined) ? !s.playing : !!on;
+  if (want && !s.playing)      { s.start(); s._card && s._card.classList.add('on'); }
+  else if (!want && s.playing) { s.stop();  s._card && s._card.classList.remove('on'); }
+  saveActive();
+}
+function remotePublishState() {
+  const st = {
+    radio: {
+      playing: !!(currentStream && !audio.paused),
+      station: currentStream ? currentStream.name : null,
+      index: currentStation,
+      title: (npTrack && npTrack.textContent || '').trim(),
+      vol: Math.round((audio.volume || 0) * 100)
+    },
+    master: Math.round(+masterSlider.value || 0),
+    stations: stations.map((s, i) => ({ i: i, name: s.name, fav: !!s.fav })),
+    sounds: sounds.map(s => ({ id: s.def.id, name: s.def.name, emoji: s.def.emoji, on: s.playing }))
+  };
+  fetch('/api/remote/state', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ state: st }) }).catch(() => {});
+}
+function execRemote(cmd, a) {
+  a = a || {};
+  switch (cmd) {
+    case 'radio.play':   if (a.index != null && stations[a.index]) playStation(a.index); break;
+    case 'radio.stop':   stopRadio(); break;
+    case 'radio.toggle': npToggle.click(); break;
+    case 'radio.next':   if (stations.length) playStation(((currentStation < 0 ? -1 : currentStation) + 1) % stations.length); break;
+    case 'radio.prev':   if (stations.length) playStation((currentStation <= 0 ? stations.length : currentStation) - 1); break;
+    case 'radio.vol': {
+      const v = Math.max(0, Math.min(100, +a.value || 0));
+      audio.volume = v / 100; save('radioVol', audio.volume);
+      const rv = document.getElementById('radioVol'); if (rv) { rv.value = v; fillSlider(rv); }
+      break;
+    }
+    case 'master.vol': {
+      const v = Math.max(0, Math.min(100, +a.value || 0));
+      masterSlider.value = v; masterSlider.dispatchEvent(new Event('input')); fillSlider(masterSlider);
+      break;
+    }
+    case 'sound.toggle': toggleSound(a.id); break;
+    case 'sounds.off':   sounds.forEach(s => { if (s.playing) { s.stop(); s._card && s._card.classList.remove('on'); } }); saveActive(); break;
+  }
+  remotePublishState();
+}
+let _remoteSince = 0;
+function remotePoll() {
+  fetch('/api/remote/poll?since=' + _remoteSince).then(r => r.json()).then(d => {
+    if (!d || !d.cmds) return;
+    d.cmds.forEach(c => { _remoteSince = Math.max(_remoteSince, c.id); execRemote(c.cmd, c.args); });
+  }).catch(() => {});
+}
+setInterval(remotePoll, 1200);
+setInterval(remotePublishState, 4000);
+setTimeout(remotePublishState, 1500);

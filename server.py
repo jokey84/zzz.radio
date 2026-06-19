@@ -646,6 +646,18 @@ def store_write(data):
         return False
 
 
+# ---- Web-Fernbedienung: Befehls-Vermittler (Remote -> Kiosk) + Zustand ------
+_remote = {'seq': 0, 'cmds': []}     # Befehlsschlange, vom Kiosk abgepollt
+_remote_state = {}                   # zuletzt gemeldeter Kiosk-Zustand
+
+def remote_push(cmd, args):
+    _remote['seq'] += 1
+    _remote['cmds'].append({'id': _remote['seq'], 'cmd': cmd, 'args': args or {}})
+    if len(_remote['cmds']) > 50:
+        _remote['cmds'] = _remote['cmds'][-50:]
+    return _remote['seq']
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **k):
         super().__init__(*a, directory=DIR, **k)
@@ -715,6 +727,16 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if p.startswith('/api/img'):
             q = parse_qs(urlparse(p).query)
             return self.serve_image((q.get('url') or [''])[0])
+        if p.startswith('/api/remote/poll'):
+            q = parse_qs(urlparse(p).query)
+            try:
+                since = int((q.get('since') or ['0'])[0])
+            except ValueError:
+                since = 0
+            return self._json({'seq': _remote['seq'],
+                               'cmds': [c for c in _remote['cmds'] if c['id'] > since]})
+        if p.startswith('/api/remote/state'):
+            return self._json({'state': _remote_state})
         if p.startswith('/api/store'):
             return self._json({'data': store_read()})
         if p.startswith('/api/bt/active'):
@@ -758,6 +780,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if p.startswith('/api/wifi/connect'):
             b = self._body()
             return self._json(wifi_connect((b.get('ssid') or '').strip(), b.get('password') or ''))
+        if p.startswith('/api/remote/cmd'):
+            b = self._body()
+            return self._json({'ok': True, 'id': remote_push(b.get('cmd', ''), b.get('args'))})
+        if p.startswith('/api/remote/state'):
+            global _remote_state
+            st = self._body().get('state')
+            if isinstance(st, dict):
+                _remote_state = st
+            return self._json({'ok': True})
         if p.startswith('/api/store'):
             return self._json({'ok': store_write(self._body().get('data'))})
         if p.startswith('/api/audio/setvolume'):
