@@ -26,7 +26,7 @@ sudo apt install -y \
   cage "$CHROME_PKG" python3 git \
   network-manager upower ddcutil \
   pipewire pipewire-pulse wireplumber libspa-0.2-bluetooth pulseaudio-utils \
-  fonts-dejavu-core fonts-noto-color-emoji xcursor-transparent-theme
+  fonts-dejavu-core fonts-noto-color-emoji
 fc-cache -f >/dev/null 2>&1 || true   # Emoji-Schrift sofort verfügbar machen
 
 # Audio-Dienste (inkl. Bluetooth-A2DP) für den Benutzer starten
@@ -102,9 +102,12 @@ pkill -f "server.py 8080" 2>/dev/null || true
 python3 "$DIR/server.py" 8080 &
 sleep 1
 CHROME="\$(command -v chromium || command -v chromium-browser)"
-# Mauszeiger im Kiosk unsichtbar machen (cage/wlroots nutzt dieses Cursor-Theme)
-export XCURSOR_THEME=xcursor-transparent-theme
+# Mauszeiger im Kiosk unsichtbar: transparentes Theme + Software-Cursor erzwingen
+# (die Pi-GPU zeichnet sonst einen Hardware-Cursor, den das Theme nicht überdeckt)
+export XCURSOR_PATH=\$HOME/.icons:/usr/share/icons
+export XCURSOR_THEME=zzz-blank
 export XCURSOR_SIZE=24
+export WLR_NO_HARDWARE_CURSORS=1
 exec cage -- "\$CHROME" \\
   --kiosk --app=http://localhost:8080/index.html \\
   --enable-features=UseOzonePlatform --ozone-platform=wayland \\
@@ -118,6 +121,19 @@ exec cage -- "\$CHROME" \\
   --check-for-update-interval=31536000
 EOF
 chmod +x "$DIR/launch-cage.sh"
+
+# Transparentes Cursor-Theme erzeugen (Mauszeiger im Kiosk ausblenden)
+echo "▶ Transparentes Cursor-Theme anlegen …"
+bash "$DIR/hide-cursor.sh" >/dev/null 2>&1 || python3 - <<'PY'
+import struct, os
+data = (b'Xcur' + struct.pack('<III', 16, 0x00010000, 1)
+        + struct.pack('<III', 0xfffd0002, 24, 28)
+        + struct.pack('<IIIIIIIII', 36, 0xfffd0002, 24, 1, 1, 1, 0, 0, 0) + struct.pack('<I', 0))
+d = os.path.expanduser('~/.icons/zzz-blank/cursors'); os.makedirs(d, exist_ok=True)
+for n in ['left_ptr','default','arrow','pointer','hand','hand1','hand2','xterm','text','watch','wait']:
+    open(os.path.join(d, n), 'wb').write(data)
+open(os.path.expanduser('~/.icons/zzz-blank/index.theme'), 'w').write('[Icon Theme]\nName=zzz-blank\nInherits=core\n')
+PY
 
 # ---- 7) Konsolen-Auto-Login auf tty1 ---------------------------------------
 echo "▶ Auto-Login aktivieren …"
