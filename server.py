@@ -235,6 +235,17 @@ def bt_status(mac):
     return {'connected': connected, 'battery': battery}
 
 
+def bt_active():
+    """Erstes aktuell verbundenes BT-Gerät (für die Statusleiste – egal ob als Standard markiert)."""
+    if not IS_LINUX:
+        return {'connected': False, 'battery': None, 'name': None, 'mac': None}
+    for d in bt_list():
+        if d.get('connected'):
+            return {'connected': True, 'battery': d.get('battery'),
+                    'name': d.get('name'), 'mac': d.get('mac')}
+    return {'connected': False, 'battery': None, 'name': None, 'mac': None}
+
+
 def sink_volume():
     """Lautstärke des Standard-Ausgangs in % (für das Volume-HUD)."""
     if not IS_LINUX:
@@ -679,6 +690,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if p.startswith('/api/img'):
             q = parse_qs(urlparse(p).query)
             return self.serve_image((q.get('url') or [''])[0])
+        if p.startswith('/api/bt/active'):
+            return self._json(bt_active())
         if p.startswith('/api/bt/battery'):
             q = parse_qs(urlparse(p).query)
             return self._json(bt_status((q.get('mac') or [''])[0]))

@@ -1072,21 +1072,21 @@ function setBattery(pct) {
 }
 function setBtIcon(connected) {
   btConnected = !!connected;
-  const has = !!localStorage.getItem('btSpeaker');
-  btIcon.classList.toggle('hidden', !has);          // kein Standard-Lautsprecher → kein Icon
-  btIcon.classList.toggle('on', has && !!connected); // verbunden → blau leuchtend, sonst gedimmt
+  // Icon zeigen, sobald irgendein BT-Gerät verbunden ist ODER ein Standard-Lautsprecher gesetzt ist
+  const show = connected || !!localStorage.getItem('btSpeaker');
+  btIcon.classList.toggle('hidden', !show);
+  btIcon.classList.toggle('on', !!connected);       // verbunden → blau leuchtend, sonst gedimmt
 }
 function pollBattery() {
-  const mac = localStorage.getItem('btSpeaker');
-  if (!mac) { btBatt.classList.add('hidden'); btIcon.classList.add('hidden'); return; }
-  fetch('/api/bt/battery?mac=' + encodeURIComponent(mac)).then(r => r.json()).then(d => {
+  fetch('/api/bt/active').then(r => r.json()).then(d => {
+    if (d.connected && d.mac) localStorage.setItem('btSpeaker', d.mac);  // letzte Quelle merken (Auto-Verbinden)
     setBtIcon(d.connected);
     if (d.battery == null) btBatt.classList.add('hidden');
     else { setBattery(d.battery); btBatt.classList.remove('hidden'); }
   }).catch(() => { btBatt.classList.add('hidden'); setBtIcon(false); });
 }
 pollBattery();
-setInterval(pollBattery, 15000);
+setInterval(pollBattery, 20000);
 
 /* Beim Start automatisch mit dem zuletzt genutzten Lautsprecher verbinden */
 function btAutoConnectOnStart() {
