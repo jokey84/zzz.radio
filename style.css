@@ -997,3 +997,10 @@ button:active            { transform: scale(.92); }   /* eindrücken */
 
 /* Kiosk/Touch: Mauszeiger ausblenden (Bedienung nur per Touch) */
 html, body, * { cursor: none !important; }
+
+/* Bluetooth-Status-Icon in der Statusleiste */
+.bt-icon { font-size: 12px; line-height: 1; flex: 0 0 auto;
+  transition: opacity .3s ease, filter .3s ease; }
+.bt-icon.hidden { display: none; }
+.bt-icon:not(.on) { opacity: .35; filter: grayscale(1); }          /* getrennt = blass/grau */
+.bt-icon.on { opacity: 1; filter: drop-shadow(0 0 5px rgba(78,163,255,.75)); }  /* verbunden = blau leuchtend */

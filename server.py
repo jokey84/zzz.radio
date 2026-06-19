@@ -214,6 +214,27 @@ def bt_battery(mac):
     return None
 
 
+def bt_status(mac):
+    """Verbindungsstatus + Akku eines BT-Geräts in einem Aufruf (für die Statusleiste)."""
+    if not (IS_LINUX and valid_mac(mac)):
+        return {'connected': False, 'battery': None}
+    info = sh(['bluetoothctl', 'info', mac])
+    connected = 'Connected: yes' in info
+    battery = None
+    m = re.search(r'Battery Percentage:.*\((\d+)\)', info)
+    if m:
+        battery = int(m.group(1))
+    elif connected:
+        macu = mac.replace(':', '_')
+        for line in sh(['upower', '-e']).splitlines():
+            if macu in line:
+                mm = re.search(r'percentage:\s*(\d+)%', sh(['upower', '-i', line.strip()]))
+                if mm:
+                    battery = int(mm.group(1))
+                    break
+    return {'connected': connected, 'battery': battery}
+
+
 def sink_volume():
     """Lautstärke des Standard-Ausgangs in % (für das Volume-HUD)."""
     if not IS_LINUX:
@@ -660,7 +681,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self.serve_image((q.get('url') or [''])[0])
         if p.startswith('/api/bt/battery'):
             q = parse_qs(urlparse(p).query)
-            return self._json({'battery': bt_battery((q.get('mac') or [''])[0])})
+            return self._json(bt_status((q.get('mac') or [''])[0]))
         if p.startswith('/api/bt/log'):
             return self._json({'log': bt_log_read()})
         if p.rstrip('/') == '/api/bt' or p.startswith('/api/bt?'):

@@ -9,3 +9,5 @@ __pycache__/
 *.pyc
 # Vom Installer auf dem Pi erzeugt
 launch-cage.sh
+
+.claude/

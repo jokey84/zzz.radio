@@ -1048,12 +1048,12 @@ function notePlayback() {
     clearTimeout(btIdleTimer); btIdleTimer = null;
     if (!btConnected && !btBusy) {
       btBusy = true;
-      btCtl('connect').then(d => { btConnected = !!(d && d.ok); btBusy = false; });
+      btCtl('connect').then(d => { btBusy = false; setBtIcon(d && d.ok); });
     }
   } else if (!btIdleTimer) {
     btIdleTimer = setTimeout(() => {
       btIdleTimer = null;
-      btCtl('disconnect').then(() => { btConnected = false; });
+      btCtl('disconnect').then(() => setBtIcon(false));
     }, 60000);
   }
 }
@@ -1062,6 +1062,7 @@ function notePlayback() {
  * Lautsprecher-Akku (oben) + Apple-artiges Lautstärke-HUD
  * ----------------------------------------------------------------------- */
 const btBatt  = document.getElementById('btBatt');
+const btIcon  = document.getElementById('btIcon');
 const battFill = document.getElementById('battFill');
 const battPct  = document.getElementById('battPct');
 function setBattery(pct) {
@@ -1069,16 +1070,35 @@ function setBattery(pct) {
   battPct.textContent = pct + '%';
   btBatt.classList.toggle('low', pct <= 20);
 }
+function setBtIcon(connected) {
+  btConnected = !!connected;
+  const has = !!localStorage.getItem('btSpeaker');
+  btIcon.classList.toggle('hidden', !has);          // kein Standard-Lautsprecher → kein Icon
+  btIcon.classList.toggle('on', has && !!connected); // verbunden → blau leuchtend, sonst gedimmt
+}
 function pollBattery() {
   const mac = localStorage.getItem('btSpeaker');
-  if (!mac) { btBatt.classList.add('hidden'); return; }
+  if (!mac) { btBatt.classList.add('hidden'); btIcon.classList.add('hidden'); return; }
   fetch('/api/bt/battery?mac=' + encodeURIComponent(mac)).then(r => r.json()).then(d => {
+    setBtIcon(d.connected);
     if (d.battery == null) btBatt.classList.add('hidden');
     else { setBattery(d.battery); btBatt.classList.remove('hidden'); }
-  }).catch(() => { btBatt.classList.add('hidden'); });
+  }).catch(() => { btBatt.classList.add('hidden'); setBtIcon(false); });
 }
 pollBattery();
-setInterval(pollBattery, 30000);
+setInterval(pollBattery, 15000);
+
+/* Beim Start automatisch mit dem zuletzt genutzten Lautsprecher verbinden */
+function btAutoConnectOnStart() {
+  if (!localStorage.getItem('btSpeaker') || btBusy) return;
+  btBusy = true;
+  btCtl('connect').then(d => {
+    btBusy = false;
+    setBtIcon(d && d.ok);
+    pollBattery();
+  });
+}
+btAutoConnectOnStart();
 
 const volHud  = document.getElementById('volHud');
 const volFill = document.getElementById('volFill');
