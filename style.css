@@ -994,3 +994,6 @@ button:active            { transform: scale(.92); }   /* eindrücken */
   #searchResults .station, .set-item, .station.playing .station-chevron, .chip.active
   { animation: none !important; }
 }
+
+/* Kiosk/Touch: Mauszeiger ausblenden (Bedienung nur per Touch) */
+html, body, * { cursor: none !important; }

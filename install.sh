@@ -106,6 +106,7 @@ exec cage -- "\$CHROME" \\
   --kiosk --app=http://localhost:8080/index.html \\
   --enable-features=UseOzonePlatform --ozone-platform=wayland \\
   --disable-features=Translate,TranslateUI \\
+  --disable-translate \\
   --lang=de --no-first-run --disable-pinch \\
   --noerrdialogs --disable-infobars \\
   --overscroll-history-navigation=0 \\
