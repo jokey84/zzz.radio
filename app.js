@@ -2055,6 +2055,12 @@ function remotePublishState() {
       vol: Math.round((audio.volume || 0) * 100)
     },
     master: Math.round(+masterSlider.value || 0),
+    device: {
+      timer: timerBtn.classList.contains('active'),
+      timerLabel: timerBtn.classList.contains('active') ? timerBtn.textContent.replace('⏱', '').trim() : '',
+      warm: readNum('warmLevel', 0) > 0,
+      screensaver: !dimOverlay.classList.contains('hidden')
+    },
     stations: stations.map((s, i) => ({ i: i, name: s.name, fav: !!s.fav })),
     sounds: sounds.map(s => ({ id: s.def.id, name: s.def.name, emoji: s.def.emoji, on: s.playing }))
   };
@@ -2082,6 +2088,10 @@ function execRemote(cmd, a) {
     }
     case 'sound.toggle': toggleSound(a.id); break;
     case 'sounds.off':   sounds.forEach(s => { if (s.playing) { s.stop(); s._card && s._card.classList.remove('on'); } }); saveActive(); break;
+    case 'timer.set':    startTimer(Math.max(0, +a.minutes || 0)); break;
+    case 'screensaver':  dimOverlay.classList.toggle('hidden', !a.on); break;
+    case 'warm.toggle':  applyWarm(readNum('warmLevel', 0) > 0 ? 0 : readNum('warmLast', 2)); break;
+    case 'all.off':      stopAll(); break;
   }
   remotePublishState();
 }

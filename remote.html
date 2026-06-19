@@ -60,6 +60,13 @@
     .snd .em { font-size:24px; } .snd.on { background:linear-gradient(180deg,#20406e,#16263f); border-color:rgba(78,163,255,.4); }
     .muted { color:var(--dim); text-align:center; padding:10px; }
     .full { width:100%; }
+    .chips { display:flex; gap:8px; flex-wrap:wrap; }
+    .chips button { flex:1 1 28%; padding:13px 6px; font-size:14px; }
+    .chips button.on { background:linear-gradient(180deg,#20406e,#16263f); border-color:rgba(78,163,255,.5); color:#cfe5ff; }
+    .row2 { display:flex; gap:10px; } .row2 button { flex:1; }
+    button.on { background:linear-gradient(180deg,#20406e,#16263f); border-color:rgba(78,163,255,.5); color:#cfe5ff; }
+    .danger { background:linear-gradient(180deg,#3a1620,#2a0f16); border-color:rgba(255,90,90,.4); color:#ffb4b4; }
+    .lab .run { color:var(--accent); text-transform:none; letter-spacing:0; }
   </style>
 </head>
 <body>
@@ -98,6 +105,30 @@
     <button class="full" style="margin-top:10px" onclick="cmd('sounds.off')">⏹ Alle Sounds aus</button>
   </div>
 
+  <div class="card">
+    <div class="lab">Sleep-Timer <span class="run" id="timerRun"></span></div>
+    <div class="chips" id="timerChips">
+      <button data-min="15">15 min</button>
+      <button data-min="30">30 min</button>
+      <button data-min="45">45 min</button>
+      <button data-min="60">60 min</button>
+      <button data-min="0">Aus</button>
+    </div>
+    <div class="row2" style="margin-top:12px">
+      <button id="warmBtn" onclick="cmd('warm.toggle')">🌙 Nachtlicht</button>
+      <button id="ssBtn">🕐 Uhr</button>
+    </div>
+    <button class="full" style="margin-top:10px" onclick="cmd('all.off')">⏹ Alles aus (Radio + Sounds)</button>
+  </div>
+
+  <div class="card">
+    <div class="lab">Gerät</div>
+    <div class="row2">
+      <button onclick="power('reboot')">🔄 Neustart</button>
+      <button class="danger" onclick="power('shutdown')">⏻ Ausschalten</button>
+    </div>
+  </div>
+
   <div class="muted" id="conn">verbinde …</div>
 
   <script>
@@ -111,6 +142,17 @@
       s.addEventListener('pointerdown', function(){ dragging = s.id; });
       s.addEventListener('pointerup',   function(){ setTimeout(function(){ dragging = null; }, 600); });
     });
+    document.querySelectorAll('#timerChips button').forEach(function(b){
+      b.onclick = function(){ cmd('timer.set', { minutes: +b.dataset.min }); };
+    });
+    function power(action){
+      var msg = action === 'shutdown' ? 'Den Pi wirklich ausschalten?' : 'Den Pi neu starten?';
+      if (!confirm(msg)) return;
+      fetch('/api/power', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:action }) })
+        .then(function(r){ return r.json(); })
+        .then(function(d){ document.getElementById('conn').textContent = d.ok ? 'Befehl gesendet …' : ('Nicht möglich: ' + (d.msg||'')); })
+        .catch(function(){ document.getElementById('conn').textContent = 'Befehl gesendet (Verbindung trennt sich) …'; });
+    }
 
     function render(st){
       document.getElementById('conn').textContent = 'verbunden ✓';
@@ -139,6 +181,16 @@
         b.onclick=function(){ cmd('sound.toggle',{id:s.id}); };
         gc.appendChild(b);
       });
+
+      var dev = st.device || {};
+      document.getElementById('timerRun').textContent = dev.timer ? ('läuft · ' + (dev.timerLabel||'')) : '';
+      document.querySelectorAll('#timerChips button').forEach(function(b){
+        b.classList.toggle('on', (+b.dataset.min === 0 && !dev.timer));
+      });
+      document.getElementById('warmBtn').classList.toggle('on', !!dev.warm);
+      var sb = document.getElementById('ssBtn');
+      sb.classList.toggle('on', !!dev.screensaver);
+      sb.onclick = function(){ cmd('screensaver', { on: !dev.screensaver }); };
     }
     function poll(){
       fetch('/api/remote/state').then(function(r){return r.json();}).then(function(d){
