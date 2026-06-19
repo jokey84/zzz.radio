@@ -26,7 +26,7 @@ sudo apt install -y \
   cage "$CHROME_PKG" python3 git \
   network-manager upower ddcutil \
   pipewire pipewire-pulse wireplumber libspa-0.2-bluetooth pulseaudio-utils \
-  fonts-dejavu-core fonts-noto-color-emoji
+  fonts-dejavu-core fonts-noto-color-emoji xcursor-transparent-theme
 fc-cache -f >/dev/null 2>&1 || true   # Emoji-Schrift sofort verfügbar machen
 
 # Audio-Dienste (inkl. Bluetooth-A2DP) für den Benutzer starten
@@ -102,6 +102,9 @@ pkill -f "server.py 8080" 2>/dev/null || true
 python3 "$DIR/server.py" 8080 &
 sleep 1
 CHROME="\$(command -v chromium || command -v chromium-browser)"
+# Mauszeiger im Kiosk unsichtbar machen (cage/wlroots nutzt dieses Cursor-Theme)
+export XCURSOR_THEME=xcursor-transparent-theme
+export XCURSOR_SIZE=24
 exec cage -- "\$CHROME" \\
   --kiosk --app=http://localhost:8080/index.html \\
   --enable-features=UseOzonePlatform --ozone-platform=wayland \\
