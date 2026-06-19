@@ -9,10 +9,12 @@ set -e
 echo "▶ 1/3  transparentes Cursor-Theme bauen …"
 python3 - <<'PY'
 import struct, os
-head  = b'Xcur' + struct.pack('<III', 16, 0x00010000, 1)
-toc   = struct.pack('<III', 0xfffd0002, 24, 28)
-chunk = struct.pack('<IIIIIIIII', 36, 0xfffd0002, 24, 1, 1, 1, 0, 0, 0) + struct.pack('<I', 0)
-data  = head + toc + chunk
+W = H = 24                                   # 24x24, komplett transparent (wlroots verwirft 1x1)
+head   = b'Xcur' + struct.pack('<III', 16, 0x00010000, 1)
+toc    = struct.pack('<III', 0xfffd0002, W, 28)
+pixels = struct.pack('<%dI' % (W * H), *([0] * (W * H)))   # alle Pixel ARGB 0 = unsichtbar
+chunk  = struct.pack('<IIIIIIIII', 36, 0xfffd0002, W, 1, W, H, 0, 0, 0) + pixels
+data   = head + toc + chunk
 d = os.path.expanduser('~/.icons/zzz-blank/cursors')
 os.makedirs(d, exist_ok=True)
 names = ['left_ptr','default','arrow','top_left_arrow','hand','hand1','hand2','pointer',

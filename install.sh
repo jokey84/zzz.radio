@@ -126,9 +126,11 @@ chmod +x "$DIR/launch-cage.sh"
 echo "▶ Transparentes Cursor-Theme anlegen …"
 bash "$DIR/hide-cursor.sh" >/dev/null 2>&1 || python3 - <<'PY'
 import struct, os
+W = H = 24
 data = (b'Xcur' + struct.pack('<III', 16, 0x00010000, 1)
-        + struct.pack('<III', 0xfffd0002, 24, 28)
-        + struct.pack('<IIIIIIIII', 36, 0xfffd0002, 24, 1, 1, 1, 0, 0, 0) + struct.pack('<I', 0))
+        + struct.pack('<III', 0xfffd0002, W, 28)
+        + struct.pack('<IIIIIIIII', 36, 0xfffd0002, W, 1, W, H, 0, 0, 0)
+        + struct.pack('<%dI' % (W * H), *([0] * (W * H))))
 d = os.path.expanduser('~/.icons/zzz-blank/cursors'); os.makedirs(d, exist_ok=True)
 for n in ['left_ptr','default','arrow','pointer','hand','hand1','hand2','xterm','text','watch','wait']:
     open(os.path.join(d, n), 'wb').write(data)
