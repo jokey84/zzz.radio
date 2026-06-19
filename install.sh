@@ -74,6 +74,12 @@ else
   sudo rm -f "$TOUCHRULE" 2>/dev/null || true   # Hochformat: keine Matrix nötig
 fi
 
+# Manche Touch-Panels (z.B. Waveshare) melden sich zusätzlich als Maus -> sichtbarer
+# Cursor. Als reinen Touchscreen führen = keine Maus-Emulation = kein Zeiger.
+echo 'SUBSYSTEM=="input", ATTRS{name}=="WaveShare WaveShare", ENV{ID_INPUT_TOUCHSCREEN}="1", ENV{ID_INPUT_MOUSE}="0", ENV{ID_INPUT_TOUCHPAD}="0"' \
+  | sudo tee /etc/udev/rules.d/98-zzzradio-touchonly.rules >/dev/null
+sudo udevadm control --reload 2>/dev/null || true
+
 # Helligkeit per Hardware ermöglichen (Backlight-Schreibrecht + i2c für DDC/CI)
 echo 'i2c-dev' | sudo tee /etc/modules-load.d/i2c-dev.conf >/dev/null
 echo 'ACTION=="add", SUBSYSTEM=="backlight", RUN+="/bin/chmod a+w /sys/class/backlight/%k/brightness"' \
