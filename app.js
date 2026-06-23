@@ -1345,6 +1345,18 @@ settingsBtn.addEventListener('click', () => {
   navigate(PANELS.root);
 });
 
+/* Schnellzugriff: Einstellungen öffnen und direkt zu einem Panel springen */
+function openSettingsPanel(panel) {
+  if (!panel) return;
+  settingsView.classList.remove('hidden');
+  settingsView.classList.remove('opening'); void settingsView.offsetWidth;
+  settingsView.classList.add('opening');
+  setStack = [PANELS.root];                        // „Zurück" führt zum Hauptmenü
+  navigate(panel);
+}
+const hueChip = document.getElementById('hueChip');
+if (hueChip) hueChip.addEventListener('click', () => openSettingsPanel(PANELS.hue));
+
 /* Roter Punkt am Zahnrad, wenn ein Update verfügbar ist */
 function checkUpdateBadge() {
   fetch('/api/update/check').then(r => r.json())
