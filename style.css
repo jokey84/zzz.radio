@@ -453,6 +453,7 @@ button:active            { transform: scale(.92); }   /* eindrücken */
 
 /* ===== Sound-Zeile (Squeezebox-Listeneintrag) ===== */
 .card {
+  position: relative;
   background: var(--row);
   border: 1px solid var(--hairline);
   border-top-color: rgba(255,255,255,.10);
@@ -961,8 +962,15 @@ button:active            { transform: scale(.92); }   /* eindrücken */
 .card:nth-child(8){animation-delay:.21s}.card:nth-child(9){animation-delay:.24s}
 .card:nth-child(10){animation-delay:.27s}.card:nth-child(n+11){animation-delay:.30s}
 
-/* aktive Karte: sanft „atmender" Glanz + pulsierender Punkt */
-.card.on { animation: cardPop .35s cubic-bezier(.2,.7,.3,1.5), glowPulse 3.4s ease-in-out infinite .35s; }
+/* aktive Karte: sanft „atmender" Glanz (GPU-billig: nur Deckkraft eines
+   Pseudo-Elements mit STATISCHEM Schein – kein teures box-shadow-Neuzeichnen) */
+.card.on { animation: cardPop .35s cubic-bezier(.2,.7,.3,1.5); }
+.card.on::after {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(78,163,255,.55), 0 8px 26px rgba(78,163,255,.3);
+  animation: cardBreath 3.4s ease-in-out infinite;
+}
+@keyframes cardBreath { 0%,100% { opacity: .45; } 50% { opacity: 1; } }
 .card.on .card-dot { animation: dotPulse 1.9s ease-in-out infinite; }
 
 /* gespeicherte Sender & Suchtreffer: gestaffeltes Auftauchen */
@@ -990,7 +998,7 @@ button:active            { transform: scale(.92); }   /* eindrücken */
 
 /* Barrierefreiheit: bei „weniger Bewegung" alles ruhig stellen */
 @media (prefers-reduced-motion: reduce) {
-  .view:not(.hidden), .card, .card.on, .card.on .card-dot, .station-wrap,
+  .view:not(.hidden), .card, .card.on, .card.on::after, .card.on .card-dot, .station-wrap,
   #searchResults .station, .set-item, .station.playing .station-chevron, .chip.active
   { animation: none !important; }
 }
