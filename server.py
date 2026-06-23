@@ -718,8 +718,13 @@ def hue_state(ip, user):
     if not (_hue_ip_ok(ip) and user):
         return {'error': 'Nicht gekoppelt.'}
     try:
-        return {'lights': _http_json('http://%s/api/%s/lights' % (ip, user)),
-                'groups': _http_json('http://%s/api/%s/groups' % (ip, user))}
+        out = {'lights': _http_json('http://%s/api/%s/lights' % (ip, user)),
+               'groups': _http_json('http://%s/api/%s/groups' % (ip, user))}
+        try:
+            out['scenes'] = _http_json('http://%s/api/%s/scenes' % (ip, user))
+        except Exception:
+            out['scenes'] = {}
+        return out
     except Exception as e:
         return {'error': str(e)[:120]}
 

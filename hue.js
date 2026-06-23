@@ -96,6 +96,14 @@ function hueRenderControl(b) {
     ch.addEventListener('click', () => hueApiSet('groups', '0', { on: v }).then(() => setTimeout(load, 500)));
     tools.appendChild(ch);
   });
+  const gn = el('button', 'chip', '🌙 Gute Nacht');
+  gn.addEventListener('click', () => uiConfirm('Gute Nacht: Lichter über 1 Min. ausblenden und Sleep-Timer (30 Min.) starten?').then(ok => {
+    if (!ok) return;
+    hueApiSet('groups', '0', { on: false, transitiontime: 600 });   // sanft über 60 s ausblenden
+    if (typeof startTimer === 'function') startTimer(30);            // Ton über 30 Min ausblenden
+    setTimeout(load, 800);
+  }));
+  tools.appendChild(gn);
   b.appendChild(tools);
 
   b.appendChild(setSection('Räume & Lichter'));
@@ -117,6 +125,20 @@ function hueRenderControl(b) {
           lk.forEach(id => { const L = lights[id]; wrap.appendChild(hueCard('lights', id, L.name, L.state)); });
         }
         if (!gk.length && !lk.length) wrap.appendChild(el('div', 'search-hint', 'Keine Lichter gefunden.'));
+
+        const scenes = d.scenes || {};
+        const sk = Object.keys(scenes).filter(id => scenes[id].name && (scenes[id].type === 'GroupScene' || scenes[id].group)).slice(0, 40);
+        if (sk.length) {
+          wrap.appendChild(setSection('Szenen'));
+          const sc = el('div', 'hue-scenes');
+          sk.forEach(id => {
+            const s = scenes[id];
+            const btn = el('button', 'hue-scene', '🎬 ' + escapeHtml(s.name));
+            btn.addEventListener('click', () => hueApiSet('groups', s.group || '0', { scene: id }).then(() => setTimeout(load, 600)));
+            sc.appendChild(btn);
+          });
+          wrap.appendChild(sc);
+        }
       }).catch(() => { wrap.innerHTML = ''; wrap.appendChild(el('div', 'search-hint', 'Kein Dienst erreichbar.')); });
   }
   load();

@@ -1174,3 +1174,10 @@ html, body, *, *::before, *::after {
 .hue-dot { -webkit-appearance:none; appearance:none; width:30px; height:30px; border-radius:50%;
   border:2px solid rgba(255,255,255,.32); padding:0; box-shadow:0 1px 4px rgba(0,0,0,.45); cursor:pointer; }
 .hue-dot:active { transform:scale(.9); }
+
+/* Hue-Szenen */
+.hue-scenes { display:flex; flex-wrap:wrap; gap:8px; }
+.hue-scene { -webkit-appearance:none; appearance:none; padding:10px 14px; border-radius:12px;
+  border:1px solid var(--hairline); border-top-color:rgba(255,255,255,.1);
+  background:var(--row); color:var(--text); font-size:13px; font-weight:600; box-shadow:0 2px 6px rgba(0,0,0,.35); }
+.hue-scene:active { transform:scale(.94); }
