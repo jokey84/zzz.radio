@@ -1118,3 +1118,23 @@ html, body, *, *::before, *::after {
 @media (prefers-reduced-motion: reduce) {
   .wx-drop, .wx-flake, .wx-star, .wx-sun, .wx-cloudp, .wx-fogp, .wx-flash.on { animation:none !important; }
 }
+
+/* Wetter: +Button (oben rechts), Hinzufügen-Panel, Slide beim Städtewechsel */
+.wx-add { position:absolute; top:calc(8px + env(safe-area-inset-top)); right:10px; z-index:3;
+  width:42px; height:42px; border-radius:50%; border:none; font-size:28px; line-height:1; padding:0;
+  background:rgba(255,255,255,.18); color:#fff; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+.wx-add-panel { position:absolute; inset:0; z-index:6; display:flex; flex-direction:column;
+  background:rgba(8,13,22,.94); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
+  padding:calc(14px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); }
+.wx-add-panel.hidden { display:none; }
+.wx-add-head { display:flex; align-items:center; justify-content:space-between; font-size:18px; font-weight:600; margin-bottom:14px; }
+.wx-add-close { width:36px; height:36px; border-radius:50%; border:none; background:rgba(255,255,255,.15); color:#fff; font-size:15px; }
+.wx-add-search { display:flex; gap:8px; margin-bottom:12px; }
+.wx-add-search .search-input { flex:1; }
+#wxAddResults { overflow-y:auto; }
+#wxAddResults::-webkit-scrollbar { width:0; }
+
+@keyframes wxInL { from { opacity:0; transform:translateX(38px); } to { opacity:1; transform:none; } }
+@keyframes wxInR { from { opacity:0; transform:translateX(-38px); } to { opacity:1; transform:none; } }
+.wx-scroll.wx-in-l { animation:wxInL .3s ease; }
+.wx-scroll.wx-in-r { animation:wxInR .3s ease; }

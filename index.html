@@ -200,6 +200,7 @@
   <div id="wxView" class="wx-view hidden">
     <div class="wx-fx" id="wxFx" aria-hidden="true"></div>
     <button class="wx-back" id="wxBack" aria-label="Zurück">‹</button>
+    <button class="wx-add" id="wxAdd" aria-label="Stadt hinzufügen">+</button>
     <div class="wx-dots" id="wxDots"></div>
     <div class="wx-scroll">
       <div class="wx-now">
@@ -218,6 +219,17 @@
       </div>
       <div class="wx-grid" id="wxDetails"></div>
       <div class="wx-src">Daten: Open-Meteo</div>
+    </div>
+    <div class="wx-add-panel hidden" id="wxAddPanel">
+      <div class="wx-add-head">
+        <span>Stadt hinzufügen</span>
+        <button class="wx-add-close" id="wxAddClose" aria-label="Schließen">✕</button>
+      </div>
+      <div class="wx-add-search">
+        <input id="wxAddInput" class="search-input osk-input" placeholder="Stadt suchen …" inputmode="none" autocomplete="off" />
+        <button id="wxAddGo" class="search-go">🔍</button>
+      </div>
+      <div id="wxAddResults"></div>
     </div>
   </div>
   <script src="weather.js"></script>

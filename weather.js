@@ -179,20 +179,63 @@ function renderWxView() {
 }
 
 /* ---- Öffnen/Schließen + Wischen zwischen Städten ---- */
+const wxScroll = wxView.querySelector('.wx-scroll');
 function openWx() { renderWxView(); buildFx(); wxView.classList.remove('hidden'); }
 function closeWx() { wxView.classList.add('hidden'); clearFx(); }
 wxChip.addEventListener('click', openWx);
 wxBack.addEventListener('click', closeWx);
-let _sx = 0, _sy = 0;
-wxView.addEventListener('pointerdown', e => { _sx = e.clientX; _sy = e.clientY; });
-wxView.addEventListener('pointerup', e => {
-  const dx = e.clientX - _sx, dy = e.clientY - _sy;
-  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-    const cities = wxCities(); if (cities.length < 2) return;
-    let i = (wxActiveIdx() + (dx < 0 ? 1 : -1) + cities.length) % cities.length;
-    wxSetActive(i); loadWeather();
+
+/* Stadt wechseln mit Slide-Animation (dir: +1 nächste, -1 vorherige) */
+function wxGoTo(dir) {
+  const cities = wxCities(); if (cities.length < 2) return;
+  wxSetActive((wxActiveIdx() + dir + cities.length) % cities.length);
+  loadWeather();
+  if (wxScroll) {
+    const cls = dir > 0 ? 'wx-in-l' : 'wx-in-r';
+    wxScroll.classList.remove('wx-in-l', 'wx-in-r'); void wxScroll.offsetWidth; wxScroll.classList.add(cls);
   }
+}
+let _sx = 0, _sy = 0, _sw = false;
+wxView.addEventListener('pointerdown', e => { _sx = e.clientX; _sy = e.clientY; _sw = wxAddPanel.classList.contains('hidden'); });
+wxView.addEventListener('pointerup', e => {
+  if (!_sw) return;                                  // Hinzufügen-Panel offen → kein Wischen
+  const dx = e.clientX - _sx, dy = e.clientY - _sy;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.3) wxGoTo(dx < 0 ? 1 : -1);
 });
+
+/* +Button oben rechts: Stadt hinzufügen direkt in der Ansicht */
+const wxAddBtn = document.getElementById('wxAdd');
+const wxAddPanel = document.getElementById('wxAddPanel');
+const wxAddInput = document.getElementById('wxAddInput');
+const wxAddResults = document.getElementById('wxAddResults');
+function wxOpenAdd() { wxAddResults.innerHTML = ''; wxAddInput.value = ''; wxAddPanel.classList.remove('hidden'); }
+function wxCloseAdd() { wxAddPanel.classList.add('hidden'); hideKeyboard(); }
+function wxAddCity(r) {
+  const a = wxCities();
+  const ex = a.findIndex(x => x.lat == r.latitude && x.lon == r.longitude);
+  if (ex >= 0) { wxSetActive(ex); } else { a.push({ name: r.name, lat: r.latitude, lon: r.longitude }); wxSaveCities(a); wxSetActive(a.length - 1); }
+  wxCloseAdd(); _wxData = null; loadWeather();
+}
+function wxSearch() {
+  const q = wxAddInput.value.trim(); if (!q) return;
+  wxAddResults.innerHTML = ''; wxAddResults.appendChild(el('div', 'search-hint', 'Suche …'));
+  fetch('/api/geocode?q=' + encodeURIComponent(q)).then(r => r.json()).then(d => {
+    wxAddResults.innerHTML = '';
+    const li = (d && d.results) || [];
+    if (!li.length) { wxAddResults.appendChild(el('div', 'search-hint', 'Nichts gefunden.')); return; }
+    li.forEach(r => {
+      const it = el('button', 'set-item', '<span class="si-label">' +
+        escapeHtml(r.name + (r.admin1 ? ', ' + r.admin1 : '') + ' · ' + (r.country || '')) + '</span><span class="si-chev">＋</span>');
+      it.addEventListener('click', () => wxAddCity(r));
+      wxAddResults.appendChild(it);
+    });
+  }).catch(() => { wxAddResults.innerHTML = ''; wxAddResults.appendChild(el('div', 'search-hint', 'Kein Dienst erreichbar.')); });
+}
+wxAddBtn.addEventListener('click', wxOpenAdd);
+document.getElementById('wxAddClose').addEventListener('click', wxCloseAdd);
+document.getElementById('wxAddGo').addEventListener('click', wxSearch);
+wxAddInput.addEventListener('focus', () => showKeyboard(wxAddInput, wxSearch));
+wxAddInput.addEventListener('click', () => showKeyboard(wxAddInput, wxSearch));
 /* Screensaver/Idle: Wetteransicht schließen, damit die FX-Animation nicht im
    Hintergrund die GPU dauerbelastet. */
 new MutationObserver(() => {
