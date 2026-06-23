@@ -1078,3 +1078,43 @@ html, body, *, *::before, *::after {
 .wx-tile .v { font-size:24px; font-weight:500; margin-top:6px; font-variant-numeric:tabular-nums; }
 .wx-tile .s { font-size:13px; opacity:.8; margin-top:2px; }
 .wx-src { text-align:center; font-size:11px; opacity:.55; margin-top:4px; }
+
+/* ---- Wetter: animierter Hintergrund (Apple-Stil), läuft nur bei offener Ansicht ---- */
+.wx-fx { position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0; }
+.wx-view .wx-scroll { position:relative; z-index:1; }
+.wx-dots { position:absolute; top:calc(15px + env(safe-area-inset-top)); left:0; right:0; z-index:3;
+  display:flex; gap:7px; justify-content:center; }
+.wx-dots i { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.4); transition:background .2s; }
+.wx-dots i.on { background:#fff; }
+
+@keyframes wxFall  { to { transform:translateY(120vh); } }
+@keyframes wxSnow  { to { transform:translateY(120vh) translateX(var(--x,0)); } }
+@keyframes wxTwk   { 0%,100% { opacity:.15; } 50% { opacity:1; } }
+@keyframes wxSun   { 0%,100% { transform:scale(1);    opacity:.8; } 50% { transform:scale(1.12); opacity:1; } }
+@keyframes wxDrift { from { transform:translateX(-45vw); } to { transform:translateX(125vw); } }
+@keyframes wxFlash { 0%{opacity:0} 4%{opacity:.9} 9%{opacity:.1} 14%{opacity:.75} 22%{opacity:0} 100%{opacity:0} }
+
+.wx-drop  { position:absolute; top:-30px; width:2px; border-radius:2px;
+  background:linear-gradient(transparent, rgba(255,255,255,.6)); animation:wxFall var(--d,.8s) linear var(--dl,0s) infinite; }
+.wx-flake { position:absolute; top:-12px; border-radius:50%; background:#fff;
+  animation:wxSnow var(--d,8s) linear var(--dl,0s) infinite; }
+.wx-star  { position:absolute; border-radius:50%; background:#fff; box-shadow:0 0 3px rgba(255,255,255,.7);
+  animation:wxTwk var(--d,3s) ease-in-out var(--dl,0s) infinite; }
+.wx-sun   { position:absolute; top:6%; left:50%; width:200px; height:200px; margin-left:-100px; border-radius:50%;
+  background:radial-gradient(circle, rgba(255,238,175,.6), rgba(255,238,175,0) 70%); animation:wxSun 6s ease-in-out infinite; }
+.wx-cloudp{ position:absolute; left:0; width:170px; height:56px; border-radius:50px; filter:blur(5px);
+  background:radial-gradient(circle at 30% 55%, rgba(255,255,255,.20), rgba(255,255,255,0) 70%),
+            radial-gradient(circle at 62% 42%, rgba(255,255,255,.17), rgba(255,255,255,0) 72%);
+  animation:wxDrift var(--d,60s) linear var(--dl,0s) infinite; }
+.wx-fogp  { position:absolute; left:0; width:150vw; height:130px; background:rgba(255,255,255,.10); filter:blur(22px);
+  animation:wxDrift var(--d,45s) linear var(--dl,0s) infinite; }
+.wx-flash { position:absolute; inset:0; opacity:0;
+  background:radial-gradient(circle at 50% 25%, rgba(255,255,255,.95), rgba(180,200,255,.2) 55%, transparent 75%); }
+.wx-flash.on { animation:wxFlash 1.3s ease-out; }
+
+/* Städte-Verwaltung in den Einstellungen */
+.wx-city-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+.wx-city-row .station { flex:1; margin:0; }
+@media (prefers-reduced-motion: reduce) {
+  .wx-drop, .wx-flake, .wx-star, .wx-sun, .wx-cloudp, .wx-fogp, .wx-flash.on { animation:none !important; }
+}
