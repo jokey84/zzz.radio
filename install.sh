@@ -144,6 +144,10 @@ for n in ['left_ptr','default','arrow','pointer','hand','hand1','hand2','xterm',
 open(os.path.expanduser('~/.icons/zzz-blank/index.theme'), 'w').write('[Icon Theme]\nName=zzz-blank\nInherits=core\n')
 PY
 
+# ---- 6b) Gegen Einfrieren absichern: Hardware-Watchdog + zram --------------
+echo "▶ System gegen Einfrieren absichern (Watchdog + zram) …"
+bash "$DIR/harden.sh" >/dev/null 2>&1 || echo "  (Absicherung übersprungen)"
+
 # ---- 7) Konsolen-Auto-Login auf tty1 ---------------------------------------
 echo "▶ Auto-Login aktivieren …"
 sudo raspi-config nonint do_boot_behaviour B2 || true
