@@ -214,6 +214,7 @@ const DEFAULT_STATIONS = [
 let stations = JSON.parse(localStorage.getItem('stations_v2') || 'null') || DEFAULT_STATIONS.slice();
 let currentStation = -1;          // Index in der Liste (-1 = spielt etwas Ungespeichertes)
 let currentStream = null;         // {name,url,logo} – was gerade läuft (auch Suchtreffer)
+let currentPodcast = null;        // {title,url} – laufende Podcast-Folge (nutzt denselben Player)
 let closeOpenRow = null;          // schließt die aktuell aufgewischte Sender-Zeile
 
 const audio = new Audio();
@@ -419,6 +420,7 @@ function attachSwipe(row, i, onDelete) {
 /* beliebigen Stream abspielen (auch ungespeicherte Suchtreffer) */
 function playStream(st) {
   ensureCtx();
+  currentPodcast = null;             // Radio übernimmt den Player
   currentStream = { name: st.name, url: st.url, logo: st.logo || '' };
   currentStation = stations.findIndex(s => s.url === st.url);   // -1 wenn nicht in Liste
   radioIntended = true;
@@ -446,6 +448,7 @@ function stopRadio() {
   stopNowPlay();
   currentStation = -1;
   currentStream = null;
+  currentPodcast = null;
   setNpName('Kein Sender');
   npArt.innerHTML = '📻';
   npState.textContent = 'gestoppt';
@@ -462,7 +465,8 @@ audio.addEventListener('playing', () => {
   if (typeof notePlayback === 'function') notePlayback();
 });
 audio.addEventListener('pause', () => {
-  if (currentStream && !radioIntended) { npState.textContent = 'pausiert'; npToggle.textContent = '▶'; }
+  if (currentPodcast) { npState.textContent = 'pausiert'; npToggle.textContent = '▶'; }
+  else if (currentStream && !radioIntended) { npState.textContent = 'pausiert'; npToggle.textContent = '▶'; }
   if (typeof notePlayback === 'function') notePlayback();
 });
 audio.addEventListener('error', () => {
@@ -470,7 +474,10 @@ audio.addEventListener('error', () => {
   if (radioIntended) scheduleReconnect();
   else npState.textContent = 'Fehler – Stream nicht erreichbar';
 });
-audio.addEventListener('ended', () => { if (radioIntended) scheduleReconnect(); });
+audio.addEventListener('ended', () => {
+  if (currentPodcast) { npState.textContent = 'Folge zu Ende'; npToggle.textContent = '▶'; return; }
+  if (radioIntended) scheduleReconnect();
+});
 
 /* Wächter gegen „eingefrorenen" Stream: schreitet die Wiedergabe nicht mehr fort
    (Buffer-Underrun ohne error/ended-Event), hart neu verbinden. */
@@ -490,6 +497,7 @@ setInterval(() => {
 }, 3000);
 
 npToggle.addEventListener('click', () => {
+  if (currentPodcast) { if (audio.paused) audio.play(); else audio.pause(); return; }
   if (!currentStream) { if (stations.length) playStation(0); return; }
   if (audio.paused) { radioIntended = true; cancelReconnect(); audio.play(); }
   else { radioIntended = false; cancelReconnect(); audio.pause(); }
@@ -1539,6 +1547,7 @@ const PANELS = {
       navItem(b, '🔵', t('set.bluetooth'), () => navigate(PANELS.bluetooth));
       navItem(b, '🔊', t('set.audio'),     () => navigate(PANELS.audio));
       navItem(b, '🎚️', t('set.equalizer'), () => navigate(PANELS.equalizer));
+      navItem(b, '🎙️', 'Podcasts',         () => navigate(PANELS.podcast));
       navItem(b, '🌤️', 'Wetter',           () => navigate(PANELS.weather));
       navItem(b, '💡', 'Philips Hue',       () => navigate(PANELS.hue));
       navItem(b, '🖥️', t('set.display'),   () => navigate(PANELS.display));

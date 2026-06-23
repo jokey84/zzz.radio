@@ -9,6 +9,7 @@
 # ============================================================================
 import http.server, json, os, platform, re, socket, ssl, subprocess, sys, threading, time, uuid
 import urllib.request
+import xml.etree.ElementTree as ET
 from urllib.parse import urlparse, parse_qs, quote
 
 DIR  = os.path.dirname(os.path.abspath(__file__))
@@ -681,6 +682,53 @@ def ip_location():
     return {}
 
 
+# ---- Podcasts (Suche via iTunes, Folgen via RSS) ----------------------------
+def _fetch_text(url, timeout=12):
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    req = urllib.request.Request(url, headers={'User-Agent': 'zzz.radio/1.0'})
+    with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
+        return r.read().decode('utf-8', 'replace')
+
+def podcast_search(q):
+    d = _fetch_json('https://itunes.apple.com/search?media=podcast&limit=24&term=' + quote(q))
+    out = []
+    for r in d.get('results', []):
+        if r.get('feedUrl'):
+            out.append({'name': r.get('collectionName'), 'author': r.get('artistName'),
+                        'feedUrl': r.get('feedUrl'), 'artwork': r.get('artworkUrl100') or r.get('artworkUrl60')})
+    return out
+
+def podcast_feed(url):
+    raw = _fetch_text(url)
+    raw = re.sub(r'^﻿', '', raw).lstrip()
+    root = ET.fromstring(raw)
+    chan = root.find('channel')
+    if chan is None:
+        chan = root
+    ns = {'itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd'}
+    img = ''
+    iel = chan.find('itunes:image', ns)
+    if iel is not None:
+        img = iel.get('href') or ''
+    if not img:
+        u = chan.find('image/url')
+        img = u.text if u is not None else ''
+    eps = []
+    for item in chan.findall('item'):
+        enc = item.find('enclosure')
+        url2 = enc.get('url') if enc is not None else None
+        if not url2:
+            continue
+        dur = item.findtext('itunes:duration', default='', namespaces=ns)
+        eps.append({'title': (item.findtext('title') or 'Folge').strip()[:160],
+                    'url': url2, 'date': (item.findtext('pubDate') or '')[:25], 'duration': dur})
+        if len(eps) >= 60:
+            break
+    return {'title': (chan.findtext('title') or 'Podcast').strip(), 'image': img, 'episodes': eps}
+
+
 # ---- Philips Hue (lokale Bridge-API v1, ohne Cloud) -------------------------
 def _http_json(url, method='GET', body=None, timeout=8):
     data = json.dumps(body).encode('utf-8') if body is not None else None
@@ -840,6 +888,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 return self._json({'error': str(e)[:140]}, 502)
         if p.startswith('/api/iploc'):
             return self._json(ip_location())
+        if p.startswith('/api/podcast/search'):
+            q = parse_qs(urlparse(p).query)
+            try:
+                return self._json({'results': podcast_search((q.get('q') or [''])[0])})
+            except Exception as e:
+                return self._json({'error': str(e)[:140]}, 502)
+        if p.startswith('/api/podcast/feed'):
+            q = parse_qs(urlparse(p).query)
+            try:
+                return self._json(podcast_feed((q.get('url') or [''])[0]))
+            except Exception as e:
+                return self._json({'error': str(e)[:140]}, 502)
         if p.startswith('/api/hue/discover'):
             return self._json({'bridges': hue_discover()})
         if p.startswith('/api/hue/state'):
