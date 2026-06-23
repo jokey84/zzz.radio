@@ -195,13 +195,24 @@ function wxGoTo(dir) {
     wxScroll.classList.remove('wx-in-l', 'wx-in-r'); void wxScroll.offsetWidth; wxScroll.classList.add(cls);
   }
 }
-let _sx = 0, _sy = 0, _sw = false;
-wxView.addEventListener('pointerdown', e => { _sx = e.clientX; _sy = e.clientY; _sw = wxAddPanel.classList.contains('hidden'); });
-wxView.addEventListener('pointerup', e => {
-  if (!_sw) return;                                  // Hinzufügen-Panel offen → kein Wischen
-  const dx = e.clientX - _sx, dy = e.clientY - _sy;
-  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.3) wxGoTo(dx < 0 ? 1 : -1);
-});
+function wxHandleSwipe(dx, dy) {
+  if (!wxAddPanel.classList.contains('hidden')) return;      // Hinzufügen-Panel offen → kein Wischen
+  if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.3) wxGoTo(dx < 0 ? 1 : -1);
+}
+/* Touchscreen: echte Touch-Events (feuern zuverlässig, auch bei Scroll) */
+let _tx = 0, _ty = 0, _tskip = false;
+wxView.addEventListener('touchstart', e => {
+  const t = e.changedTouches[0]; _tx = t.clientX; _ty = t.clientY;
+  _tskip = !!(e.target.closest && e.target.closest('.wx-hourly'));   // im Stunden-Streifen nicht wischen
+}, { passive: true });
+wxView.addEventListener('touchend', e => {
+  if (_tskip) return;
+  const t = e.changedTouches[0]; wxHandleSwipe(t.clientX - _tx, t.clientY - _ty);
+}, { passive: true });
+/* Maus (Desktop/Test): getrennt, damit es sich nicht mit Touch doppelt */
+let _mx = 0, _my = 0, _md = false;
+wxView.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') { _mx = e.clientX; _my = e.clientY; _md = true; } });
+wxView.addEventListener('pointerup', e => { if (e.pointerType === 'mouse' && _md) { _md = false; wxHandleSwipe(e.clientX - _mx, e.clientY - _my); } });
 
 /* +Button oben rechts: Stadt hinzufügen direkt in der Ansicht */
 const wxAddBtn = document.getElementById('wxAdd');
