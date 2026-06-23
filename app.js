@@ -472,6 +472,23 @@ audio.addEventListener('error', () => {
 });
 audio.addEventListener('ended', () => { if (radioIntended) scheduleReconnect(); });
 
+/* Wächter gegen „eingefrorenen" Stream: schreitet die Wiedergabe nicht mehr fort
+   (Buffer-Underrun ohne error/ended-Event), hart neu verbinden. */
+let _watchT = 0, _watchAdvance = Date.now();
+function noteAudioProgress() { _watchT = audio.currentTime; _watchAdvance = Date.now(); }
+audio.addEventListener('timeupdate', noteAudioProgress);
+audio.addEventListener('playing', noteAudioProgress);
+setInterval(() => {
+  if (!radioIntended || audio.paused) { noteAudioProgress(); return; }   // soll nicht laufen → kein Alarm
+  if (audio.currentTime > _watchT + 0.05) { noteAudioProgress(); return; } // Fortschritt → ok
+  if (Date.now() - _watchAdvance > 15000) {                               // 15 s ohne Fortschritt = hängt
+    noteAudioProgress();
+    npState.textContent = 'Stream hängt – neu verbinden …';
+    try { audio.pause(); audio.removeAttribute('src'); audio.load(); } catch (e) {}
+    attemptReconnect();
+  }
+}, 3000);
+
 npToggle.addEventListener('click', () => {
   if (!currentStream) { if (stations.length) playStation(0); return; }
   if (audio.paused) { radioIntended = true; cancelReconnect(); audio.play(); }
