@@ -35,6 +35,7 @@ fi
 if [ "$1" = "run" ]; then
   last="$(date '+%Y-%m-%d %H:%M:%S')"
   prev="-"
+  hb=0
   while true; do
     now="$(date '+%Y-%m-%d %H:%M:%S')"
     # 1) Kernel-Meldungen zu Bluetooth (inkl. "continuation frame", Link-Loss)
@@ -61,13 +62,16 @@ if [ "$1" = "run" ]; then
       echo "$now  [STATE] BT verbunden: $n -$conn" >> "$LOG"
       prev="$n"
     fi
-    # 5) WLAN-Signal + Kurzstatus
-    sig=$(awk 'NR==3{print $3}' /proc/net/wireless 2>/dev/null)
-    echo "$now  [RF] wlan_signal=${sig:-?} bt_connected=$n" >> "$LOG"
-
-    # Log begrenzen
-    if [ "$(wc -l < "$LOG" 2>/dev/null || echo 0)" -gt 6000 ]; then
-      tail -n 4000 "$LOG" > "$LOG.tmp" 2>/dev/null && mv "$LOG.tmp" "$LOG"
+    # 5) WLAN-Signal-Heartbeat nur alle ~5 min (Störungen oben werden sofort geloggt)
+    hb=$((hb + 1))
+    if [ $((hb % 15)) -eq 1 ]; then
+      sig=$(awk 'NR==3{print $3}' /proc/net/wireless 2>/dev/null)
+      echo "$now  [RF] wlan_signal=${sig:-?} bt_connected=$n" >> "$LOG"
+    fi
+    # Log begrenzen (FIFO): über 8000 Zeilen -> auf die letzten 6000 kürzen.
+    # Durch den seltenen Heartbeat bleiben echte Ereignisse wochenlang erhalten.
+    if [ "$(wc -l < "$LOG" 2>/dev/null || echo 0)" -gt 8000 ]; then
+      tail -n 6000 "$LOG" > "$LOG.tmp" 2>/dev/null && mv "$LOG.tmp" "$LOG"
     fi
     sleep 20
   done

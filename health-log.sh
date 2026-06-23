@@ -24,4 +24,5 @@ temp=$(vcgencmd measure_temp 2>/dev/null | sed 's/temp=//')
 thr=$(vcgencmd get_throttled 2>/dev/null | sed 's/.*=//')
 top=$(ps -eo comm,rss --sort=-rss 2>/dev/null | awk 'NR==2{printf "%s=%dMB",$1,$2/1024}')
 echo "$ts mem=$mem swap=$swap temp=${temp:-n/a} throttled=${thr:-n/a} top=$top" >> "$LOG"
-tail -n 3000 "$LOG" > "$LOG.tmp" 2>/dev/null && mv "$LOG.tmp" "$LOG"
+# FIFO: über 10000 Zeilen (~1 Woche bei 1/min) auf die letzten 8000 kürzen
+[ "$(wc -l < "$LOG" 2>/dev/null || echo 0)" -gt 10000 ] && { tail -n 8000 "$LOG" > "$LOG.tmp" 2>/dev/null && mv "$LOG.tmp" "$LOG"; }
