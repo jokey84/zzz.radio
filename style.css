@@ -1008,3 +1008,73 @@ html, body, *, *::before, *::after {
 .bt-icon.hidden { display: none; }
 .bt-icon:not(.on) { opacity: .35; filter: grayscale(1); }          /* getrennt = blass/grau */
 .bt-icon.on { opacity: 1; filter: drop-shadow(0 0 5px rgba(78,163,255,.75)); }  /* verbunden = blau leuchtend */
+
+/* ===================================================================== *
+ *  Wetter — Apple-Wetter-Stil
+ * ===================================================================== */
+.sb-weather { -webkit-appearance:none; appearance:none; display:inline-flex; align-items:center; gap:3px;
+  background:none; border:none; color:#aeb9cc; font-size:12px; padding:0; cursor:pointer;
+  font-variant-numeric:tabular-nums; }
+.sb-weather.hidden { display:none; }
+.sb-weather span:first-child { font-size:13px; }
+
+.ss-weather { margin-top:10px; font-size:20px; color:#cfe0f5; letter-spacing:.3px;
+  display:flex; align-items:center; gap:8px; justify-content:center; }
+.ss-weather.hidden { display:none; }
+.ss-weather .e { font-size:24px; }
+
+/* Vollbild-Ansicht */
+.wx-view { position:fixed; inset:0; z-index:70; max-width:400px; margin:0 auto;
+  color:#fff; overflow:hidden; display:flex; flex-direction:column;
+  background:linear-gradient(180deg,#2a5d9e,#5a8fc7); transition:background .6s ease; }
+.wx-view.hidden { display:none; }
+.wx-clear-day   { background:linear-gradient(180deg,#2f6fc0,#7fb3e6); }
+.wx-clear-night { background:linear-gradient(180deg,#0a1430,#243b6b); }
+.wx-cloud       { background:linear-gradient(180deg,#46546b,#7e8ca3); }
+.wx-cloud-night { background:linear-gradient(180deg,#1a2233,#3a4660); }
+.wx-rain        { background:linear-gradient(180deg,#2b3a52,#54657f); }
+.wx-snow        { background:linear-gradient(180deg,#5b6b86,#9fb0c8); }
+.wx-storm       { background:linear-gradient(180deg,#23203a,#4a4566); }
+.wx-fog         { background:linear-gradient(180deg,#566072,#9aa3b2); }
+
+.wx-back { position:absolute; top:calc(8px + env(safe-area-inset-top)); left:10px; z-index:2;
+  width:42px; height:42px; border-radius:50%; border:none; font-size:26px; line-height:1;
+  background:rgba(255,255,255,.18); color:#fff; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+.wx-scroll { flex:1; overflow-y:auto; padding:calc(56px + env(safe-area-inset-top)) 16px
+  calc(24px + env(safe-area-inset-bottom)); }
+.wx-scroll::-webkit-scrollbar { width:0; }
+
+.wx-now { text-align:center; margin:6px 0 22px; text-shadow:0 1px 8px rgba(0,0,0,.25); }
+.wx-city { font-size:26px; font-weight:600; }
+.wx-temp { font-size:84px; font-weight:200; line-height:1; margin:2px 0; letter-spacing:-2px; }
+.wx-cond { font-size:17px; opacity:.95; }
+.wx-hilo { font-size:16px; opacity:.9; margin-top:3px; font-variant-numeric:tabular-nums; }
+
+.wx-card { background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.18);
+  border-radius:18px; padding:12px 14px; margin-bottom:14px;
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+.wx-card-head { font-size:11px; letter-spacing:1.5px; text-transform:uppercase; opacity:.7; margin-bottom:10px; }
+
+.wx-hourly { display:flex; gap:18px; overflow-x:auto; padding-bottom:4px; }
+.wx-hourly::-webkit-scrollbar { height:0; }
+.wx-h { display:flex; flex-direction:column; align-items:center; gap:7px; flex:0 0 auto;
+  font-variant-numeric:tabular-nums; }
+.wx-h .t { font-size:13px; opacity:.85; } .wx-h .e { font-size:22px; } .wx-h .d { font-size:16px; font-weight:600; }
+
+.wx-daily { display:flex; flex-direction:column; }
+.wx-d { display:grid; grid-template-columns:46px 26px 30px 1fr 34px; align-items:center; gap:10px;
+  padding:9px 0; border-top:1px solid rgba(255,255,255,.12); font-variant-numeric:tabular-nums; }
+.wx-d:first-child { border-top:none; }
+.wx-d .dy { font-size:16px; font-weight:600; } .wx-d .e { font-size:20px; text-align:center; }
+.wx-d .lo { opacity:.7; text-align:right; } .wx-d .hi { text-align:right; }
+.wx-bar { position:relative; height:5px; border-radius:3px; background:rgba(255,255,255,.22); }
+.wx-bar i { position:absolute; top:0; height:5px; border-radius:3px;
+  background:linear-gradient(90deg,#7ec0ff,#ffd479); }
+
+.wx-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+.wx-tile { background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.18); border-radius:18px;
+  padding:14px; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+.wx-tile .k { font-size:11px; letter-spacing:1px; text-transform:uppercase; opacity:.7; }
+.wx-tile .v { font-size:24px; font-weight:500; margin-top:6px; font-variant-numeric:tabular-nums; }
+.wx-tile .s { font-size:13px; opacity:.8; margin-top:2px; }
+.wx-src { text-align:center; font-size:11px; opacity:.55; margin-top:4px; }

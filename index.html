@@ -26,6 +26,9 @@
         <span class="batt-ico"><span class="batt-fill" id="battFill"></span></span>
         <span class="batt-pct" id="battPct">--</span>
       </span>
+      <button class="sb-weather hidden" id="wxChip" title="Wetter">
+        <span id="wxChipIco">🌤️</span><span id="wxChipTemp">--°</span>
+      </button>
     </div>
     <span class="sb-clock" id="clock">--:--</span>
     <button class="sb-gear" id="settingsBtn" aria-label="Einstellungen">⚙</button>
@@ -155,6 +158,7 @@
     <div class="ss-brand"><span>zzz</span>.radio</div>
     <div class="ss-clock" id="ssClock">--:--</div>
     <div class="ss-date" id="ssDate"></div>
+    <div class="ss-weather hidden" id="ssWeather"></div>
     <div class="ss-hint">zum Aufwecken tippen</div>
   </div>
 
@@ -192,5 +196,28 @@
   })();
   </script>
   <script src="app.js"></script>
+  <!-- Wetter-Ansicht (Apple-Wetter-Stil) -->
+  <div id="wxView" class="wx-view hidden">
+    <button class="wx-back" id="wxBack" aria-label="Zurück">‹</button>
+    <div class="wx-scroll">
+      <div class="wx-now">
+        <div class="wx-city" id="wxCity">—</div>
+        <div class="wx-temp" id="wxTemp">--°</div>
+        <div class="wx-cond" id="wxCond"></div>
+        <div class="wx-hilo" id="wxHilo"></div>
+      </div>
+      <div class="wx-card">
+        <div class="wx-card-head" id="wxHourHead">Stündlich</div>
+        <div class="wx-hourly" id="wxHourly"></div>
+      </div>
+      <div class="wx-card">
+        <div class="wx-card-head">7-Tage-Vorhersage</div>
+        <div class="wx-daily" id="wxDaily"></div>
+      </div>
+      <div class="wx-grid" id="wxDetails"></div>
+      <div class="wx-src">Daten: Open-Meteo</div>
+    </div>
+  </div>
+  <script src="weather.js"></script>
 </body>
 </html>

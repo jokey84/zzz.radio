@@ -9,7 +9,7 @@
 # ============================================================================
 import http.server, json, os, platform, re, socket, ssl, subprocess, sys, threading, time, uuid
 import urllib.request
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, quote
 
 DIR  = os.path.dirname(os.path.abspath(__file__))
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
@@ -650,6 +650,37 @@ def store_write(data):
 _remote = {'seq': 0, 'cmds': []}     # Befehlsschlange, vom Kiosk abgepollt
 _remote_state = {}                   # zuletzt gemeldeter Kiosk-Zustand
 
+# ---- Wetter (Open-Meteo, kostenlos & ohne API-Key) --------------------------
+def _fetch_json(url, timeout=12):
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE        # Pi-Uhr/Zertifikat-tolerant
+    req = urllib.request.Request(url, headers={'User-Agent': 'zzz.radio/1.0'})
+    with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
+        return json.loads(r.read().decode('utf-8'))
+
+def weather_fetch(lat, lon):
+    url = ('https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s'
+           '&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m'
+           '&hourly=temperature_2m,weather_code,is_day'
+           '&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset'
+           '&timezone=auto&forecast_days=7') % (quote(str(lat)), quote(str(lon)))
+    return _fetch_json(url)
+
+def geocode(q):
+    return _fetch_json('https://geocoding-api.open-meteo.com/v1/search?name=%s&count=6&language=de&format=json'
+                       % quote(q))
+
+def ip_location():
+    try:
+        d = _fetch_json('http://ip-api.com/json/?fields=status,lat,lon,city,country', timeout=8)
+        if d.get('status') == 'success':
+            return {'lat': d['lat'], 'lon': d['lon'], 'name': d.get('city'), 'country': d.get('country')}
+    except Exception:
+        pass
+    return {}
+
+
 def remote_push(cmd, args):
     _remote['seq'] += 1
     _remote['cmds'].append({'id': _remote['seq'], 'cmd': cmd, 'args': args or {}})
@@ -737,6 +768,20 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                                'cmds': [c for c in _remote['cmds'] if c['id'] > since]})
         if p.startswith('/api/remote/state'):
             return self._json({'state': _remote_state})
+        if p.startswith('/api/weather'):
+            q = parse_qs(urlparse(p).query)
+            try:
+                return self._json(weather_fetch((q.get('lat') or ['52.52'])[0], (q.get('lon') or ['13.40'])[0]))
+            except Exception as e:
+                return self._json({'error': str(e)[:140]}, 502)
+        if p.startswith('/api/geocode'):
+            q = parse_qs(urlparse(p).query)
+            try:
+                return self._json(geocode((q.get('q') or [''])[0]))
+            except Exception as e:
+                return self._json({'error': str(e)[:140]}, 502)
+        if p.startswith('/api/iploc'):
+            return self._json(ip_location())
         if p.startswith('/api/store'):
             return self._json({'data': store_read()})
         if p.startswith('/api/bt/active'):
