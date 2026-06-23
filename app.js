@@ -796,8 +796,25 @@ function startDrops() {
   dropsTimer = setInterval(() => { if (Math.random() < 0.85) spawnDrop(); }, 850);
 }
 function stopDrops() { clearInterval(dropsTimer); dropsTimer = null; if (ssDrops) ssDrops.innerHTML = ''; }
+
+/* Screensaver: Animation läuft kurz, dann EINFRIEREN, damit die Pi-GPU nachts nicht
+   dauerhaft unter Volllast rendert (häufige Ursache für komplettes Einfrieren). */
+let ssFreezeTimer = null;
+function ssEnter() {
+  startDrops();
+  clearTimeout(ssFreezeTimer);
+  ssFreezeTimer = setTimeout(() => {
+    if (typeof ssAura !== 'undefined' && ssAura) ssAura.classList.add('fx-static');  // Hintergrund einfrieren
+    stopDrops();                                                                     // Tropfen aus
+  }, 180000);   // nach 3 min Ruhe
+}
+function ssExit() {
+  clearTimeout(ssFreezeTimer); ssFreezeTimer = null;
+  stopDrops();
+  if (typeof applyEffect === 'function') applyEffect();   // normalen Effekt-/Bewegungszustand wiederherstellen
+}
 new MutationObserver(() => {
-  if (!dimOverlay.classList.contains('hidden')) startDrops(); else stopDrops();
+  if (!dimOverlay.classList.contains('hidden')) ssEnter(); else ssExit();
 }).observe(dimOverlay, { attributes: true, attributeFilter: ['class'] });
 
 /* Nachtlicht / Blaulichtfilter — 0=aus, 1=sanft, 2=mittel, 3=stark */
@@ -2122,3 +2139,18 @@ function remotePoll() {
 setInterval(remotePoll, 1200);
 setInterval(remotePublishState, 4000);
 setTimeout(remotePublishState, 1500);
+
+/* ----------------------------------------------------------------------- *
+ *  Leerlauf-Selbstneustart: lädt die App alle paar Stunden neu, wenn nichts
+ *  läuft und niemand bedient – setzt Speicher/GPU sauber zurück (nahtlos,
+ *  da alle Einstellungen serverseitig in store.json liegen).
+ * ----------------------------------------------------------------------- */
+const _bootAt = Date.now();
+let _lastTouch = Date.now();
+document.addEventListener('pointerdown', () => { _lastTouch = Date.now(); }, true);
+setInterval(() => {
+  if (isPlaying()) return;                              // nichts spielt → kein Ton wird unterbrochen
+  if (Date.now() - _bootAt   < 4 * 3600 * 1000) return; // erst nach 4 h Laufzeit
+  if (Date.now() - _lastTouch < 10 * 60 * 1000) return; // 10 min keine Berührung = wirklich Leerlauf
+  location.reload();
+}, 15 * 60 * 1000);
