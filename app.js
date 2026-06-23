@@ -1528,6 +1528,7 @@ const PANELS = {
       navItem(b, '🔊', t('set.audio'),     () => navigate(PANELS.audio));
       navItem(b, '🎚️', t('set.equalizer'), () => navigate(PANELS.equalizer));
       navItem(b, '🌤️', 'Wetter',           () => navigate(PANELS.weather));
+      navItem(b, '💡', 'Philips Hue',       () => navigate(PANELS.hue));
       navItem(b, '🖥️', t('set.display'),   () => navigate(PANELS.display));
       b.appendChild(setSection(t('set.general')));
       navItem(b, '⏰', t('set.alarm'),     () => navigate(PANELS.alarm));

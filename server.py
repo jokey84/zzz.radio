@@ -681,6 +681,59 @@ def ip_location():
     return {}
 
 
+# ---- Philips Hue (lokale Bridge-API v1, ohne Cloud) -------------------------
+def _http_json(url, method='GET', body=None, timeout=8):
+    data = json.dumps(body).encode('utf-8') if body is not None else None
+    req = urllib.request.Request(url, data=data, method=method,
+                                 headers={'Content-Type': 'application/json'})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        txt = r.read().decode('utf-8')
+        return json.loads(txt) if txt.strip() else {}
+
+def _hue_ip_ok(ip):
+    return bool(re.match(r'^(10|127|169\.254|172\.(1[6-9]|2\d|3[01])|192\.168)\.', str(ip or '')))
+
+def hue_discover():
+    try:
+        d = _fetch_json('https://discovery.meethue.com', timeout=8)   # Cloud-Discovery (nur IPs)
+        return [{'id': x.get('id'), 'ip': x.get('internalipaddress')} for x in d if x.get('internalipaddress')]
+    except Exception:
+        return []
+
+def hue_pair(ip):
+    if not _hue_ip_ok(ip):
+        return {'ok': False, 'msg': 'Ungültige Bridge-IP.'}
+    try:
+        res = _http_json('http://%s/api' % ip, 'POST', {'devicetype': 'zzz_radio#pi'})
+        if isinstance(res, list) and res:
+            if 'success' in res[0]:
+                return {'ok': True, 'username': res[0]['success']['username']}
+            if 'error' in res[0]:
+                return {'ok': False, 'msg': res[0]['error'].get('description', 'Fehler')}
+        return {'ok': False, 'msg': 'Unerwartete Antwort der Bridge.'}
+    except Exception as e:
+        return {'ok': False, 'msg': str(e)[:120]}
+
+def hue_state(ip, user):
+    if not (_hue_ip_ok(ip) and user):
+        return {'error': 'Nicht gekoppelt.'}
+    try:
+        return {'lights': _http_json('http://%s/api/%s/lights' % (ip, user)),
+                'groups': _http_json('http://%s/api/%s/groups' % (ip, user))}
+    except Exception as e:
+        return {'error': str(e)[:120]}
+
+def hue_set(ip, user, kind, lid, state):
+    if not (_hue_ip_ok(ip) and user and kind in ('lights', 'groups')):
+        return {'ok': False, 'msg': 'Ungültige Anfrage.'}
+    seg = 'state' if kind == 'lights' else 'action'
+    try:
+        _http_json('http://%s/api/%s/%s/%s/%s' % (ip, user, kind, lid, seg), 'PUT', state)
+        return {'ok': True}
+    except Exception as e:
+        return {'ok': False, 'msg': str(e)[:120]}
+
+
 def remote_push(cmd, args):
     _remote['seq'] += 1
     _remote['cmds'].append({'id': _remote['seq'], 'cmd': cmd, 'args': args or {}})
@@ -782,6 +835,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 return self._json({'error': str(e)[:140]}, 502)
         if p.startswith('/api/iploc'):
             return self._json(ip_location())
+        if p.startswith('/api/hue/discover'):
+            return self._json({'bridges': hue_discover()})
+        if p.startswith('/api/hue/state'):
+            q = parse_qs(urlparse(p).query)
+            return self._json(hue_state((q.get('ip') or [''])[0], (q.get('user') or [''])[0]))
         if p.startswith('/api/store'):
             return self._json({'data': store_read()})
         if p.startswith('/api/bt/active'):
@@ -825,6 +883,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if p.startswith('/api/wifi/connect'):
             b = self._body()
             return self._json(wifi_connect((b.get('ssid') or '').strip(), b.get('password') or ''))
+        if p.startswith('/api/hue/pair'):
+            return self._json(hue_pair(self._body().get('ip', '')))
+        if p.startswith('/api/hue/set'):
+            b = self._body()
+            return self._json(hue_set(b.get('ip', ''), b.get('user', ''), b.get('kind', 'groups'),
+                                      b.get('id', '0'), b.get('state') or {}))
         if p.startswith('/api/remote/cmd'):
             b = self._body()
             return self._json({'ok': True, 'id': remote_push(b.get('cmd', ''), b.get('args'))})
