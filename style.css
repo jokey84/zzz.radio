@@ -1148,3 +1148,29 @@ html, body, *, *::before, *::after {
   border:1px solid var(--hairline); background:var(--row); color:var(--text-dim); font-weight:700; }
 .hue-toggle.on { color:#2a1d05; background:linear-gradient(180deg,#ffe49a,#f2c14e); border-color:#f2c14e;
   box-shadow:0 0 10px rgba(242,193,78,.4); }
+
+/* Philips Hue — stylische Karten (Hue-App-Look) */
+.hue-card { position:relative; border-radius:18px; margin-bottom:12px; overflow:hidden;
+  background:var(--row); border:1px solid var(--hairline); border-top-color:rgba(255,255,255,.10);
+  box-shadow:0 2px 8px rgba(0,0,0,.4); }
+.hue-glow { position:absolute; inset:0; opacity:0; transition:opacity .45s; pointer-events:none;
+  background:radial-gradient(135% 95% at 22% -15%, var(--c,#ffd479), transparent 62%); }
+.hue-card.on .hue-glow { opacity:.32; }
+.hue-body { position:relative; z-index:1; padding:15px; display:flex; flex-direction:column; gap:13px; }
+.hue-head { display:flex; align-items:center; justify-content:space-between; margin:0; }
+.hue-name { font-size:16px; font-weight:600; text-shadow:0 1px 4px rgba(0,0,0,.4); }
+.hue-sw { -webkit-appearance:none; appearance:none; width:52px; height:30px; border-radius:16px; border:none;
+  background:rgba(255,255,255,.16); position:relative; transition:background .25s; flex:0 0 auto; cursor:pointer; }
+.hue-sw::after { content:''; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%;
+  background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.4); transition:transform .22s cubic-bezier(.3,1.4,.5,1); }
+.hue-sw.on { background:linear-gradient(180deg,#ffe49a,#f2c14e); }
+.hue-sw.on::after { transform:translateX(22px); }
+.hue-slrow { display:flex; align-items:center; gap:11px; }
+.hue-ico { font-size:16px; width:22px; text-align:center; flex:0 0 auto; }
+.hue-slrow .slider { flex:1; }
+.hue-spectrum { background:linear-gradient(90deg,#ff3b30,#ffcc00,#34c759,#00c7be,#0a84ff,#5e5ce6,#ff2d55,#ff3b30) !important; box-shadow:inset 0 1px 2px rgba(0,0,0,.4) !important; }
+.ct-spectrum  { background:linear-gradient(90deg,#cfe0ff,#ffeccc,#ffcaa0) !important; box-shadow:inset 0 1px 2px rgba(0,0,0,.4) !important; }
+.hue-colors { display:flex; gap:9px; flex-wrap:wrap; }
+.hue-dot { -webkit-appearance:none; appearance:none; width:30px; height:30px; border-radius:50%;
+  border:2px solid rgba(255,255,255,.32); padding:0; box-shadow:0 1px 4px rgba(0,0,0,.45); cursor:pointer; }
+.hue-dot:active { transform:scale(.9); }
